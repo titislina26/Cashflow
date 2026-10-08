@@ -96,7 +96,7 @@
               <x-lucide-layers style="width: 15px; height: 15px; color: var(--color-primary, #3b82f6);" /> Rincian Pos Transaksi
             </div>
             <div style="font-size: 0.73rem; color: var(--text-muted); margin-top: 2px;">
-              Bisa mencatat lebih dari 1 pengeluaran/pemasukan dalam 1 nomor bukti
+              Bisa mencatat lebih dari 1 pos transaksi/pencairan dalam 1 nomor bukti
             </div>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-add-item-row" style="padding: 5px 12px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; font-weight: 600; cursor: pointer; border-radius: 6px;">
@@ -290,6 +290,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const categorySelect = document.getElementById('modal-category');
   const typeInput = document.getElementById('modal-type');
   const txForm = document.getElementById('tx-modal-form');
+  const transferCat = modalCategories.find(c => c.code === '1-1100') || { id: '60' };
+  const transferCatId = transferCat ? transferCat.id : '60';
 
   function getCurrentType() {
     return typeInput ? typeInput.value : 'expense';
@@ -473,7 +475,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (multiItemCount) multiItemCount.textContent = totalCount;
     if (multiItemTotalDisplay) {
       multiItemTotalDisplay.textContent = 'Rp ' + sum.toLocaleString('id-ID');
-      multiItemTotalDisplay.style.color = (type === 'income') ? 'var(--color-income, #10b981)' : 'var(--color-expense, #ef4444)';
+      if (type === 'income') {
+        multiItemTotalDisplay.style.color = 'var(--color-income, #10b981)';
+      } else if (type === 'transfer') {
+        multiItemTotalDisplay.style.color = 'var(--color-primary, #3b82f6)';
+      } else {
+        multiItemTotalDisplay.style.color = 'var(--color-expense, #ef4444)';
+      }
     }
     if (multiItemTerbilangDisplay) {
       multiItemTerbilangDisplay.textContent = '# ' + getSpelledRupiah(sum) + ' #';
@@ -490,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
     card.className = 'extra-item-card';
     card.style.cssText = 'padding: 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08)); border-radius: 8px; margin-bottom: 6px;';
     
+    const isTransfer = (type === 'transfer');
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span class="extra-item-badge" style="font-size: 0.78rem; font-weight: 700; color: var(--color-primary, #3b82f6);">Pos ${posNum}</span>
@@ -501,9 +510,13 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="form-row">
         <div class="form-group" style="margin-bottom: 10px;">
           <label class="form-label">Akun / Kategori</label>
-          <select class="form-select extra-category-select" required>
-            ${buildCategorySelectOptions(type, catId)}
+          <select class="form-select extra-category-select" ${isTransfer ? 'style="display:none;"' : 'required'}>
+            ${buildCategorySelectOptions(type, isTransfer ? transferCatId : catId)}
           </select>
+          <div class="extra-transfer-badge" style="${isTransfer ? 'display:flex;' : 'display:none;'} align-items: center; gap: 6px; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; color: var(--color-primary, #3b82f6); font-size: 0.82rem; font-weight: 700;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+            [1-1100] Kas dan Setara Kas
+          </div>
         </div>
         <div class="form-group" style="margin-bottom: 10px;">
           <label class="form-label">Jumlah (Rp)</label>
@@ -512,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
       <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label">Uraian / Deskripsi Pos</label>
-        <input type="text" class="form-input extra-desc-input" placeholder="Contoh: Pengiriman JNE..." value="${escapeHtml(desc)}" />
+        <input type="text" class="form-input extra-desc-input" placeholder="Contoh: Pencairan Kas / Pengiriman..." value="${escapeHtml(desc)}" />
       </div>
     `;
 
@@ -533,8 +546,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     updateMultiItemState();
 
-    const catSelect = card.querySelector('.extra-category-select');
-    if (catSelect) catSelect.focus();
+    if (isTransfer) {
+      const amtEl = card.querySelector('.extra-amount-input');
+      if (amtEl) amtEl.focus();
+    } else {
+      const catSelect = card.querySelector('.extra-category-select');
+      if (catSelect) catSelect.focus();
+    }
   }
 
   function resetExtraRows() {
@@ -582,68 +600,69 @@ document.addEventListener('DOMContentLoaded', function() {
           if (categorySelect) categorySelect.focus();
           return;
         }
+      }
 
-        const extraCards = extraItemsContainer ? extraItemsContainer.querySelectorAll('.extra-item-card') : [];
-        if (extraCards.length > 0) {
-          const pos1Amount = parseFloat(pos1AmountInput ? pos1AmountInput.value : 0) || 0;
-          if (pos1Amount <= 0) {
+      const extraCards = extraItemsContainer ? extraItemsContainer.querySelectorAll('.extra-item-card') : [];
+      if (extraCards.length > 0) {
+        const pos1Amount = parseFloat(pos1AmountInput ? pos1AmountInput.value : 0) || 0;
+        if (pos1Amount <= 0) {
+          e.preventDefault();
+          alert('Jumlah (Rp) untuk Pos 1 harus lebih besar dari 0.');
+          if (pos1AmountInput) pos1AmountInput.focus();
+          return;
+        }
+
+        for (let i = 0; i < extraCards.length; i++) {
+          const card = extraCards[i];
+          const catSelect = card.querySelector('.extra-category-select');
+          const amtInput = card.querySelector('.extra-amount-input');
+          const posNum = i + 2;
+
+          if (type !== 'transfer' && (!catSelect || !catSelect.value)) {
             e.preventDefault();
-            alert('Jumlah (Rp) untuk Pos 1 harus lebih besar dari 0.');
-            if (pos1AmountInput) pos1AmountInput.focus();
+            alert(`Silakan pilih Akun/Kategori untuk Pos ${posNum}.`);
+            if (catSelect) catSelect.focus();
             return;
           }
 
-          for (let i = 0; i < extraCards.length; i++) {
-            const card = extraCards[i];
-            const catSelect = card.querySelector('.extra-category-select');
-            const amtInput = card.querySelector('.extra-amount-input');
-            const posNum = i + 2;
-
-            if (!catSelect || !catSelect.value) {
-              e.preventDefault();
-              alert(`Silakan pilih Akun/Kategori untuk Pos ${posNum}.`);
-              if (catSelect) catSelect.focus();
-              return;
-            }
-
-            const amt = parseFloat(amtInput ? amtInput.value : 0) || 0;
-            if (amt <= 0) {
-              e.preventDefault();
-              alert(`Jumlah (Rp) untuk Pos ${posNum} harus lebih besar dari 0.`);
-              if (amtInput) amtInput.focus();
-              return;
-            }
+          const amt = parseFloat(amtInput ? amtInput.value : 0) || 0;
+          if (amt <= 0) {
+            e.preventDefault();
+            alert(`Jumlah (Rp) untuk Pos ${posNum} harus lebih besar dari 0.`);
+            if (amtInput) amtInput.focus();
+            return;
           }
-
-          // Injected hidden inputs
-          txForm.querySelectorAll('input[data-injected-item="1"]').forEach(el => el.remove());
-
-          function appendHidden(name, value) {
-            const inp = document.createElement('input');
-            inp.type = 'hidden';
-            inp.name = name;
-            inp.value = value;
-            inp.dataset.injectedItem = '1';
-            txForm.appendChild(inp);
-          }
-
-          const desc1 = document.getElementById('modal-desc') ? document.getElementById('modal-desc').value : '';
-          appendHidden('items[0][category_id]', categorySelect.value);
-          appendHidden('items[0][amount]', pos1Amount);
-          appendHidden('items[0][description]', desc1);
-
-          extraCards.forEach((card, idx) => {
-            const itemIdx = idx + 1;
-            const cVal = card.querySelector('.extra-category-select').value;
-            const aVal = card.querySelector('.extra-amount-input').value;
-            const dVal = card.querySelector('.extra-desc-input').value;
-            appendHidden(`items[${itemIdx}][category_id]`, cVal);
-            appendHidden(`items[${itemIdx}][amount]`, aVal);
-            appendHidden(`items[${itemIdx}][description]`, dVal);
-          });
-        } else {
-          txForm.querySelectorAll('input[data-injected-item="1"]').forEach(el => el.remove());
         }
+
+        // Injected hidden inputs
+        txForm.querySelectorAll('input[data-injected-item="1"]').forEach(el => el.remove());
+
+        function appendHidden(name, value) {
+          const inp = document.createElement('input');
+          inp.type = 'hidden';
+          inp.name = name;
+          inp.value = value;
+          inp.dataset.injectedItem = '1';
+          txForm.appendChild(inp);
+        }
+
+        const cat1 = (type === 'transfer') ? transferCatId : categorySelect.value;
+        const desc1 = document.getElementById('modal-desc') ? document.getElementById('modal-desc').value : '';
+        appendHidden('items[0][category_id]', cat1);
+        appendHidden('items[0][amount]', pos1Amount);
+        appendHidden('items[0][description]', desc1);
+
+        extraCards.forEach((card, idx) => {
+          const itemIdx = idx + 1;
+          const cVal = (type === 'transfer') ? transferCatId : (card.querySelector('.extra-category-select') ? card.querySelector('.extra-category-select').value : transferCatId);
+          const aVal = card.querySelector('.extra-amount-input').value;
+          const dVal = card.querySelector('.extra-desc-input') ? card.querySelector('.extra-desc-input').value : '';
+          appendHidden(`items[${itemIdx}][category_id]`, cVal);
+          appendHidden(`items[${itemIdx}][amount]`, aVal);
+          appendHidden(`items[${itemIdx}][description]`, dVal);
+        });
+      } else {
+        txForm.querySelectorAll('input[data-injected-item="1"]').forEach(el => el.remove());
       }
     });
   }
@@ -660,13 +679,26 @@ document.addEventListener('DOMContentLoaded', function() {
       if (categorySelect) {
         categorySelect.style.display = 'none';
         categorySelect.removeAttribute('required');
-        categorySelect.value = '60'; // id for [1-1100] Kas dan Setara Kas
+        categorySelect.value = transferCatId;
       }
       if (transferBadge) transferBadge.style.display = 'block';
       if (saveBtn) saveBtn.textContent = 'Proses Transfer Dana';
       if (modalVoucher) modalVoucher.placeholder = 'Contoh: No. Cek Mandiri / Bukti Transfer';
-      if (window.setMultiItemHeaderVisible) window.setMultiItemHeaderVisible(false);
-      resetExtraRows();
+      if (window.setMultiItemHeaderVisible) window.setMultiItemHeaderVisible(true);
+
+      // Update options in any open extra items for transfer mode
+      if (extraItemsContainer) {
+        extraItemsContainer.querySelectorAll('.extra-item-card').forEach(card => {
+          const select = card.querySelector('.extra-category-select');
+          const badge = card.querySelector('.extra-transfer-badge');
+          if (select) {
+            select.style.display = 'none';
+            select.removeAttribute('required');
+            select.value = transferCatId;
+          }
+          if (badge) badge.style.display = 'flex';
+        });
+      }
       
       // Auto adjust to_account so it is not the same as source account
       if (accountSelect && toAccountSelect) {
@@ -676,6 +708,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
       closeDropdown();
+      updateMultiItemState();
     } else {
       if (toAccountGroup) toAccountGroup.style.display = 'none';
       if (toAccountSelect) toAccountSelect.disabled = true;
@@ -690,14 +723,18 @@ document.addEventListener('DOMContentLoaded', function() {
       if (modalVoucher) modalVoucher.placeholder = 'Contoh: KT. 01 26.001 (Opsional)';
       if (window.setMultiItemHeaderVisible) window.setMultiItemHeaderVisible(true);
 
-      // Update options in any open extra items
+      // Update options in any open extra items for income/expense
       if (extraItemsContainer) {
         extraItemsContainer.querySelectorAll('.extra-item-card').forEach(card => {
           const select = card.querySelector('.extra-category-select');
+          const badge = card.querySelector('.extra-transfer-badge');
           if (select) {
+            select.style.display = 'block';
+            select.setAttribute('required', 'required');
             const currentVal = select.value;
             select.innerHTML = buildCategorySelectOptions(type, currentVal);
           }
+          if (badge) badge.style.display = 'none';
         });
       }
       updateMultiItemState();

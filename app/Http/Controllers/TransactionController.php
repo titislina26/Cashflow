@@ -248,14 +248,15 @@ class TransactionController extends Controller
         if ($request->has('items') && is_array($request->items) && count($request->items) > 1) {
             $request->validate([
                 'account' => 'required|in:petty_cash,bank_mandiri_1,bank_mandiri_2',
-                'type' => 'required|in:income,expense',
+                'type' => 'required|in:income,expense,transfer',
+                'to_account' => 'exclude_unless:type,transfer|required|different:account|in:petty_cash,bank_mandiri_1,bank_mandiri_2',
                 'date' => 'required|date',
                 'voucher_number' => 'nullable|string|max:255',
                 'job_id' => 'nullable|exists:accounting_jobs,id',
                 'paraf' => 'nullable|string|max:255',
                 'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
                 'items' => 'required|array|min:2',
-                'items.*.category_id' => 'required|exists:categories,id',
+                'items.*.category_id' => 'required_unless:type,transfer|nullable|exists:categories,id',
                 'items.*.amount' => 'required|numeric|min:0.01',
                 'items.*.description' => 'nullable|string|max:1000',
                 'items.*.job_id' => 'nullable|exists:accounting_jobs,id',
@@ -268,6 +269,65 @@ class TransactionController extends Controller
             }
 
             $savedCount = 0;
+            $fromName = $accountNames[$request->account] ?? $request->account;
+
+            if ($request->type === 'transfer') {
+                $toName = $accountNames[$request->to_account] ?? $request->to_account;
+                $transferCat = Category::where('code', '1-1100')->first()
+                    ?? Category::firstOrCreate(
+                        ['code' => '1-1100'],
+                        ['name' => 'Kas dan Setara Kas', 'type' => 'expense', 'icon' => '💵', 'color' => '#3b82f6']
+                    );
+
+                $totalTransfer = 0;
+                \Illuminate\Support\Facades\DB::transaction(function () use ($request, $transferCat, $fromName, $toName, $attachmentPath, &$savedCount, &$totalTransfer) {
+                    foreach ($request->items as $item) {
+                        $amt = (float)$item['amount'];
+                        $totalTransfer += $amt;
+                        $descOutflow = !empty($item['description']) ? trim($item['description']) : "Transfer dana ke {$toName}";
+                        $descInflow = !empty($item['description']) ? trim($item['description']) : "Transfer dana dari {$fromName}";
+
+                        // Sisi 1: Pengeluaran dari Rekening Asal
+                        $outflow = Transaction::create([
+                            'account' => $request->account,
+                            'type' => 'expense',
+                            'category_id' => $transferCat->id,
+                            'job_id' => !empty($item['job_id']) ? $item['job_id'] : ($request->job_id ?: null),
+                            'amount' => $amt,
+                            'voucher_number' => $request->voucher_number ?: null,
+                            'date' => $request->date,
+                            'description' => $descOutflow,
+                            'paraf' => $request->paraf ?: null,
+                            'ket' => !empty($item['ket']) ? $item['ket'] : "Transfer Kas/Bank Keluar ke {$toName}",
+                            'attachment' => $attachmentPath,
+                        ]);
+
+                        // Sisi 2: Pemasukan ke Rekening Tujuan
+                        $inflow = Transaction::create([
+                            'account' => $request->to_account,
+                            'type' => 'income',
+                            'category_id' => $transferCat->id,
+                            'job_id' => !empty($item['job_id']) ? $item['job_id'] : ($request->job_id ?: null),
+                            'amount' => $amt,
+                            'voucher_number' => $request->voucher_number ?: null,
+                            'date' => $request->date,
+                            'description' => $descInflow,
+                            'paraf' => $request->paraf ?: null,
+                            'ket' => !empty($item['ket']) ? $item['ket'] : "Transfer Kas/Bank Masuk dari {$fromName}",
+                            'attachment' => $attachmentPath,
+                            'related_transaction_id' => $outflow->id,
+                        ]);
+
+                        $outflow->update(['related_transaction_id' => $inflow->id]);
+                        $savedCount++;
+                    }
+                });
+
+                session(['active_account' => $request->account]);
+                $voucherText = $request->voucher_number ? " (No. Bukti: {$request->voucher_number})" : "";
+                return redirect()->back()->with('success', "{$savedCount} pos rincian transfer{$voucherText} total Rp " . number_format($totalTransfer, 0, ',', '.') . " dari {$fromName} ke {$toName} berhasil diproses!");
+            }
+
             \Illuminate\Support\Facades\DB::transaction(function () use ($request, $attachmentPath, &$savedCount) {
                 foreach ($request->items as $item) {
                     $description = !empty($item['description']) ? trim($item['description']) : null;

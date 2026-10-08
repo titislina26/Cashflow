@@ -251,5 +251,49 @@ class MultiItemTransactionTest extends TestCase
         $response->assertRedirect();
         $this->assertEquals(2, Transaction::where('voucher_number', 'KT.01.26.011')->where('paraf', 'Dewi Lestari')->count());
     }
+
+    public function test_can_store_multi_item_transfer_under_single_voucher()
+    {
+        $response = $this->post(route('transactions.store'), [
+            'account' => 'bank_mandiri_1',
+            'type' => 'transfer',
+            'to_account' => 'petty_cash',
+            'date' => '2026-01-06',
+            'voucher_number' => 'TTN.001',
+            'items' => [
+                [
+                    'amount' => 10000000,
+                    'description' => 'Pencairan Kas Operasional',
+                ],
+                [
+                    'amount' => 11400000,
+                    'description' => 'Pencairan Honor Penguji',
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        // Check 2 outflows from bank_mandiri_1
+        $outflows = Transaction::where('account', 'bank_mandiri_1')
+            ->where('voucher_number', 'TTN.001')
+            ->where('type', 'expense')
+            ->get();
+        $this->assertCount(2, $outflows);
+        $this->assertEquals(21400000, $outflows->sum('amount'));
+
+        // Check 2 inflows into petty_cash
+        $inflows = Transaction::where('account', 'petty_cash')
+            ->where('voucher_number', 'TTN.001')
+            ->where('type', 'income')
+            ->get();
+        $this->assertCount(2, $inflows);
+        $this->assertEquals(21400000, $inflows->sum('amount'));
+
+        // Check that related_transaction_id pairs them
+        $this->assertEquals($inflows[0]->id, $outflows[0]->related_transaction_id);
+        $this->assertEquals($outflows[0]->id, $inflows[0]->related_transaction_id);
+    }
 }
 
