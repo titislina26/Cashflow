@@ -70,7 +70,7 @@
                   <x-lucide-x style="width:14px; height:14px;" />
                 </button>
               </div>
-              <input type="hidden" name="category_id" id="modal-category" required />
+              <input type="hidden" name="category_id" id="modal-category" />
               <div id="modal-category-dropdown" class="cat-dropdown-menu"></div>
             </div>
             <div id="modal-transfer-badge" style="display: none; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; color: var(--color-primary, #3b82f6); line-height: 1.35;">
@@ -558,6 +558,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Initial state: disable to_account unless transfer
+  if (toAccountSelect && getCurrentType() !== 'transfer') {
+    toAccountSelect.disabled = true;
+  }
+
   if (txForm) {
     txForm.addEventListener('submit', (e) => {
       const type = getCurrentType();
@@ -571,8 +576,10 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         if (!hiddenInput.value) {
           e.preventDefault();
+          alert('Silakan pilih salah satu Akun/Kategori (COA) dari daftar pilihan.');
           searchInput.focus();
           openDropdown();
+          return;
         }
       }
     });
@@ -585,12 +592,12 @@ document.addEventListener('DOMContentLoaded', function() {
   window.onTransactionTypeChange = function(type) {
     if (type === 'transfer') {
       if (toAccountGroup) toAccountGroup.style.display = 'block';
+      if (toAccountSelect) toAccountSelect.disabled = false;
       if (accountLabel) accountLabel.textContent = 'Dari Rekening (Asal Dana)';
       if (categoryWrapper) categoryWrapper.style.display = 'none';
       if (transferBadge) transferBadge.style.display = 'block';
       if (searchInput) searchInput.removeAttribute('required');
       if (hiddenInput) {
-        hiddenInput.removeAttribute('required');
         hiddenInput.value = '60'; // id for [1-1100] Kas dan Setara Kas
       }
       if (saveBtn) saveBtn.textContent = 'Proses Transfer Dana';
@@ -606,13 +613,13 @@ document.addEventListener('DOMContentLoaded', function() {
       closeDropdown();
     } else {
       if (toAccountGroup) toAccountGroup.style.display = 'none';
+      if (toAccountSelect) toAccountSelect.disabled = true;
       if (accountLabel) accountLabel.textContent = 'Sumber Dana';
       if (categoryWrapper) categoryWrapper.style.display = 'block';
       if (transferBadge) transferBadge.style.display = 'none';
       if (searchInput) searchInput.setAttribute('required', 'required');
-      if (hiddenInput) hiddenInput.setAttribute('required', 'required');
       if (saveBtn) saveBtn.textContent = 'Tambah Transaksi';
-      if (modalVoucher) modalVoucher.placeholder = 'Contoh: KT. 03 26.001 (Opsional)';
+      if (modalVoucher) modalVoucher.placeholder = 'Contoh: KT. 01 26.001 (Opsional)';
 
       const currentId = hiddenInput.value;
       const currentCat = modalCategories.find(c => c.id == currentId);

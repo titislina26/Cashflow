@@ -227,7 +227,7 @@ class TransactionController extends Controller
         $request->validate([
             'account' => 'required|in:petty_cash,bank_mandiri_1,bank_mandiri_2',
             'type' => 'required|in:income,expense,transfer',
-            'to_account' => 'required_if:type,transfer|different:account|nullable|in:petty_cash,bank_mandiri_1,bank_mandiri_2',
+            'to_account' => 'exclude_unless:type,transfer|required|different:account|in:petty_cash,bank_mandiri_1,bank_mandiri_2',
             'category_id' => 'required_unless:type,transfer|nullable|exists:categories,id',
             'job_id' => 'nullable|exists:accounting_jobs,id',
             'amount' => 'required|numeric|min:0.01',

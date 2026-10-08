@@ -805,12 +805,14 @@
       }
     }
 
-    selectAll.addEventListener('change', (e) => {
-      rowCheckboxes.forEach(cb => {
-        cb.checked = e.target.checked;
+    if (selectAll) {
+      selectAll.addEventListener('change', (e) => {
+        rowCheckboxes.forEach(cb => {
+          cb.checked = e.target.checked;
+        });
+        updateBulkSelection();
       });
-      updateBulkSelection();
-    });
+    }
 
     rowCheckboxes.forEach(cb => {
       cb.addEventListener('change', () => {

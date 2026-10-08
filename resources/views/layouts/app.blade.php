@@ -138,6 +138,14 @@
         <span class="toast-message">{{ session('error') }}</span>
       </div>
     @endif
+    @if($errors->any())
+      @foreach($errors->all() as $error)
+        <div class="toast error show">
+          <span class="toast-icon"><x-lucide-alert-circle /></span>
+          <span class="toast-message">{{ $error }}</span>
+        </div>
+      @endforeach
+    @endif
   </div>
 
   <!-- Mobile Sidebar Menu Toggle Script & Lucide Init -->
