@@ -57,34 +57,18 @@
         </div>
 
         <div class="form-row">
-          <div class="form-group" id="form-group-category">
-            <label class="form-label" id="modal-category-label">Akun / Kategori</label>
-            <div class="cat-search-wrapper" id="modal-category-wrapper">
-              <div class="cat-search-input-box">
-                <span id="modal-category-selected-icon">
-                  <x-lucide-tag style="width:16px; height:16px; color:var(--text-muted);" />
-                </span>
-                <input type="text" class="form-input" id="modal-category-search" 
-                  placeholder="Ketik kode atau nama akun..." autocomplete="off" required />
-                <button type="button" id="modal-category-clear" title="Hapus pilihan" aria-label="Hapus pilihan">
-                  <x-lucide-x style="width:14px; height:14px;" />
-                </button>
-              </div>
-              <input type="hidden" name="category_id" id="modal-category" />
-              <div id="modal-category-dropdown" class="cat-dropdown-menu"></div>
-            </div>
-            <div id="modal-transfer-badge" style="display: none; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; color: var(--color-primary, #3b82f6); line-height: 1.35;">
-              <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem;">
-                <x-lucide-arrow-left-right style="width:16px; height:16px;" /> [1-1100] Kas dan Setara Kas
-              </div>
-              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
-                Mutasi internal kas & bank (tidak mempengaruhi Laporan Surplus Defisit).
-              </div>
-            </div>
-          </div>
           <div class="form-group">
             <label class="form-label">Tanggal Transaksi</label>
             <input type="date" class="form-input" name="date" id="modal-date" value="{{ date('Y-m-d') }}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Proyek/Job (Opsional)</label>
+            <select class="form-select" name="job_id" id="modal-job">
+              <option value="">— Pilih Proyek (Tidak Ada) —</option>
+              @foreach($jobs as $j)
+                <option value="{{ $j->id }}">[{{ $j->code }}] {{ $j->name }}</option>
+              @endforeach
+            </select>
           </div>
         </div>
 
@@ -105,38 +89,94 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Proyek/Job (Opsional)</label>
-          <select class="form-select" name="job_id" id="modal-job">
-            <option value="">— Pilih Proyek (Tidak Ada) —</option>
-            @foreach($jobs as $j)
-              <option value="{{ $j->id }}">[{{ $j->code }}] {{ $j->name }}</option>
-            @endforeach
-          </select>
+        <!-- Section Header Rincian Transaksi & Tombol Tambah Baris -->
+        <div id="multi-item-header-bar" style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; margin-bottom: 12px; padding: 10px 14px; background: rgba(59, 130, 246, 0.05); border: 1px dashed rgba(59, 130, 246, 0.3); border-radius: 8px;">
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+              <x-lucide-layers style="width: 15px; height: 15px; color: var(--color-primary, #3b82f6);" /> Rincian Pos Transaksi
+            </div>
+            <div style="font-size: 0.73rem; color: var(--text-muted); margin-top: 2px;">
+              Bisa mencatat lebih dari 1 pengeluaran/pemasukan dalam 1 nomor bukti
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-add-item-row" style="padding: 5px 12px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; font-weight: 600; cursor: pointer; border-radius: 6px;">
+            <x-lucide-plus style="width: 14px; height: 14px;" /> <span id="btn-add-row-text">Tambah Pos Rincian</span>
+          </button>
+        </div>
+
+        <!-- Pos 1 (Pos Utama) -->
+        <div id="pos-1-wrapper" style="padding: 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08)); border-radius: 8px; margin-bottom: 10px;">
+          <div id="pos-1-badge" style="display: none; font-size: 0.78rem; font-weight: 700; color: var(--color-primary, #3b82f6); margin-bottom: 8px;">
+            Pos 1
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" id="form-group-category" style="margin-bottom: 10px;">
+              <label class="form-label" id="modal-category-label">Akun / Kategori</label>
+              <div class="cat-search-wrapper" id="modal-category-wrapper">
+                <div class="cat-search-input-box">
+                  <span id="modal-category-selected-icon">
+                    <x-lucide-tag style="width:16px; height:16px; color:var(--text-muted);" />
+                  </span>
+                  <input type="text" class="form-input" id="modal-category-search" 
+                    placeholder="Ketik kode atau nama akun..." autocomplete="off" required />
+                  <button type="button" id="modal-category-clear" title="Hapus pilihan" aria-label="Hapus pilihan">
+                    <x-lucide-x style="width:14px; height:14px;" />
+                  </button>
+                </div>
+                <input type="hidden" name="category_id" id="modal-category" />
+                <div id="modal-category-dropdown" class="cat-dropdown-menu"></div>
+              </div>
+              <div id="modal-transfer-badge" style="display: none; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; color: var(--color-primary, #3b82f6); line-height: 1.35;">
+                <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem;">
+                  <x-lucide-arrow-left-right style="width:16px; height:16px;" /> [1-1100] Kas dan Setara Kas
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                  Mutasi internal kas & bank (tidak mempengaruhi Laporan Surplus Defisit).
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label class="form-label">Jumlah (Rp)</label>
+              <input type="number" class="form-input" name="amount" id="modal-amount" 
+                placeholder="Contoh: 120000" min="0.01" step="0.01" required />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Uraian / Deskripsi Pos</label>
+            <input type="text" class="form-input" name="description" id="modal-desc" 
+              placeholder="Contoh: Pembayaran Sampah / Pengiriman JNE..." />
+          </div>
+        </div>
+
+        <!-- Container untuk Pos Rincian Tambahan (Pos 2, 3, dst.) -->
+        <div id="extra-items-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;"></div>
+
+        <!-- Total Kalkulasi Multi-Item (Muncul otomatis jika ada lebih dari 1 pos) -->
+        <div id="multi-item-summary-box" style="display: none; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">
+              Total Keseluruhan (<span id="multi-item-count">0</span> Pos):
+            </span>
+            <span id="multi-item-total-display" class="font-mono-num" style="font-size: 1.15rem; font-weight: 800; color: var(--color-expense, #ef4444);">
+              Rp 0
+            </span>
+          </div>
+          <div id="multi-item-terbilang-display" style="font-size: 0.78rem; color: var(--text-muted); font-style: italic; margin-top: 4px;"></div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Jumlah (Rp)</label>
-          <input type="number" class="form-input" name="amount" id="modal-amount" 
-            placeholder="Contoh: 5000000" min="0.01" step="0.01" required />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Bukti Dokumen (Opsional)</label>
+          <label class="form-label">Bukti Dokumen / Lampiran (Opsional)</label>
           <input type="file" class="form-input" name="attachment" id="modal-attachment" accept=".jpg,.jpeg,.png,.pdf" />
           <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">Format: JPG, PNG, PDF (Maks. 5MB)</div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Deskripsi (Opsional)</label>
-          <textarea class="form-textarea" name="description" id="modal-desc" 
-            placeholder="Catatan tambahan (tampil di Uraian)..."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Keterangan (Opsional)</label>
-          <textarea class="form-textarea" name="ket" id="modal-ket" 
-            placeholder="Tampil di kolom Keterangan pada cetak bukti..."></textarea>
+          <label class="form-label">Keterangan Tambahan (Opsional)</label>
+          <textarea class="form-textarea" name="ket" id="modal-ket" rows="2"
+            placeholder="Catatan tambahan (tampil di kolom Keterangan pada cetak bukti)..."></textarea>
         </div>
       </div>
       
@@ -563,6 +603,192 @@ document.addEventListener('DOMContentLoaded', function() {
     toAccountSelect.disabled = true;
   }
 
+  // Multi-Item elements
+  const multiItemHeaderBar = document.getElementById('multi-item-header-bar');
+  const btnAddItemRow = document.getElementById('btn-add-item-row');
+  const pos1Wrapper = document.getElementById('pos-1-wrapper');
+  const pos1Badge = document.getElementById('pos-1-badge');
+  const extraItemsContainer = document.getElementById('extra-items-container');
+  const multiItemCountBadge = document.getElementById('multi-item-count-badge');
+  const multiItemSummaryBox = document.getElementById('multi-item-summary-box');
+  const multiItemCount = document.getElementById('multi-item-count');
+  const multiItemTotalDisplay = document.getElementById('multi-item-total-display');
+  const multiItemTerbilangDisplay = document.getElementById('multi-item-terbilang-display');
+  const btnAddRowText = document.getElementById('btn-add-row-text');
+  const pos1AmountInput = document.getElementById('modal-amount');
+
+  function terbilangNumber(angka) {
+    angka = Math.floor(Math.abs(angka));
+    const words = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+    let temp = "";
+    if (angka < 12) {
+      temp = " " + words[angka];
+    } else if (angka < 20) {
+      temp = terbilangNumber(angka - 10) + " Belas";
+    } else if (angka < 100) {
+      temp = terbilangNumber(Math.floor(angka / 10)) + " Puluh" + terbilangNumber(angka % 10);
+    } else if (angka < 200) {
+      temp = " Seratus" + terbilangNumber(angka - 100);
+    } else if (angka < 1000) {
+      temp = terbilangNumber(Math.floor(angka / 100)) + " Ratus" + terbilangNumber(angka % 100);
+    } else if (angka < 2000) {
+      temp = " Seribu" + terbilangNumber(angka - 1000);
+    } else if (angka < 1000000) {
+      temp = terbilangNumber(Math.floor(angka / 1000)) + " Ribu" + terbilangNumber(angka % 1000);
+    } else if (angka < 1000000000) {
+      temp = terbilangNumber(Math.floor(angka / 1000000)) + " Juta" + terbilangNumber(angka % 1000000);
+    } else if (angka < 1000000000000) {
+      temp = terbilangNumber(Math.floor(angka / 1000000000)) + " Miliar" + terbilangNumber(angka % 1000000000);
+    } else if (angka < 1000000000000000) {
+      temp = terbilangNumber(Math.floor(angka / 1000000000000)) + " Triliun" + terbilangNumber(angka % 1000000000000);
+    }
+    return temp;
+  }
+
+  function getSpelledRupiah(angka) {
+    if (!angka || angka === 0) return "Nol Rupiah";
+    return (terbilangNumber(angka).trim() + " Rupiah").replace(/\s+/g, ' ');
+  }
+
+  function buildCategorySelectOptions(type, selectedId = null) {
+    const cats = getCategoriesForType(type);
+    let html = '<option value="">-- Pilih Akun / Kategori (COA) --</option>';
+    cats.forEach(c => {
+      const isSelected = selectedId && (c.id == selectedId) ? 'selected' : '';
+      const label = c.code ? `[${c.code}] ${c.name}` : c.name;
+      html += `<option value="${c.id}" ${isSelected}>${escapeHtml(label)}</option>`;
+    });
+    return html;
+  }
+
+  function updateMultiItemState() {
+    const extraCards = extraItemsContainer ? extraItemsContainer.querySelectorAll('.extra-item-card') : [];
+    const totalCount = 1 + extraCards.length;
+    const type = getCurrentType();
+
+    if (extraCards.length > 0) {
+      if (pos1Badge) pos1Badge.style.display = 'block';
+      if (multiItemCountBadge) {
+        multiItemCountBadge.style.display = 'inline-block';
+        multiItemCountBadge.textContent = `${totalCount} Pos`;
+      }
+      if (multiItemSummaryBox) multiItemSummaryBox.style.display = 'block';
+      if (btnAddRowText) btnAddRowText.textContent = 'Tambah Pos Lagi';
+
+      extraCards.forEach((card, idx) => {
+        const badge = card.querySelector('.extra-item-badge');
+        if (badge) badge.textContent = `Pos ${idx + 2}`;
+      });
+    } else {
+      if (pos1Badge) pos1Badge.style.display = 'none';
+      if (multiItemCountBadge) multiItemCountBadge.style.display = 'none';
+      if (multiItemSummaryBox) multiItemSummaryBox.style.display = 'none';
+      if (btnAddRowText) btnAddRowText.textContent = 'Tambah Pos Rincian';
+    }
+
+    let sum = parseFloat(pos1AmountInput ? pos1AmountInput.value : 0) || 0;
+    extraCards.forEach(card => {
+      const amtInput = card.querySelector('.extra-amount-input');
+      if (amtInput) {
+        sum += parseFloat(amtInput.value) || 0;
+      }
+    });
+
+    if (multiItemCount) multiItemCount.textContent = totalCount;
+    if (multiItemTotalDisplay) {
+      multiItemTotalDisplay.textContent = 'Rp ' + sum.toLocaleString('id-ID');
+      multiItemTotalDisplay.style.color = (type === 'income') ? 'var(--color-income, #10b981)' : 'var(--color-expense, #ef4444)';
+    }
+    if (multiItemTerbilangDisplay) {
+      multiItemTerbilangDisplay.textContent = '# ' + getSpelledRupiah(sum) + ' #';
+    }
+  }
+
+  function addExtraItemRow(catId = null, amount = '', desc = '') {
+    if (!extraItemsContainer) return;
+    const type = getCurrentType();
+    const currentCount = extraItemsContainer.querySelectorAll('.extra-item-card').length;
+    const posNum = currentCount + 2;
+
+    const card = document.createElement('div');
+    card.className = 'extra-item-card';
+    card.style.cssText = 'padding: 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08)); border-radius: 8px; margin-bottom: 6px;';
+    
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="extra-item-badge" style="font-size: 0.78rem; font-weight: 700; color: var(--color-primary, #3b82f6);">Pos ${posNum}</span>
+        <button type="button" class="btn-remove-extra-item" style="background: none; border: none; color: #ef4444; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px;" title="Hapus Pos Ini">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          Hapus Pos
+        </button>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label">Akun / Kategori</label>
+          <select class="form-select extra-category-select" required>
+            ${buildCategorySelectOptions(type, catId)}
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label">Jumlah (Rp)</label>
+          <input type="number" class="form-input extra-amount-input" placeholder="Contoh: 100000" min="0.01" step="0.01" value="${amount}" required />
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Uraian / Deskripsi Pos</label>
+        <input type="text" class="form-input extra-desc-input" placeholder="Contoh: Pengiriman JNE..." value="${escapeHtml(desc)}" />
+      </div>
+    `;
+
+    extraItemsContainer.appendChild(card);
+
+    const removeBtn = card.querySelector('.btn-remove-extra-item');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        card.remove();
+        updateMultiItemState();
+      });
+    }
+
+    const amtInput = card.querySelector('.extra-amount-input');
+    if (amtInput) {
+      amtInput.addEventListener('input', updateMultiItemState);
+    }
+
+    updateMultiItemState();
+
+    const catSelect = card.querySelector('.extra-category-select');
+    if (catSelect) catSelect.focus();
+  }
+
+  function resetExtraRows() {
+    if (extraItemsContainer) {
+      extraItemsContainer.innerHTML = '';
+    }
+    if (txForm) {
+      txForm.querySelectorAll('input[data-injected-item="1"]').forEach(el => el.remove());
+    }
+    updateMultiItemState();
+  }
+
+  if (btnAddItemRow) {
+    btnAddItemRow.addEventListener('click', () => {
+      addExtraItemRow();
+    });
+  }
+
+  if (pos1AmountInput) {
+    pos1AmountInput.addEventListener('input', updateMultiItemState);
+  }
+
+  window.resetExtraModalItems = resetExtraRows;
+  window.addExtraModalItem = addExtraItemRow;
+  window.setMultiItemHeaderVisible = function(visible) {
+    if (multiItemHeaderBar) {
+      multiItemHeaderBar.style.display = visible ? 'flex' : 'none';
+    }
+  };
+
   if (txForm) {
     txForm.addEventListener('submit', (e) => {
       const type = getCurrentType();
@@ -576,10 +802,72 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         if (!hiddenInput.value) {
           e.preventDefault();
-          alert('Silakan pilih salah satu Akun/Kategori (COA) dari daftar pilihan.');
+          alert('Silakan pilih salah satu Akun/Kategori (COA) untuk Pos 1 dari daftar pilihan.');
           searchInput.focus();
           openDropdown();
           return;
+        }
+
+        const extraCards = extraItemsContainer ? extraItemsContainer.querySelectorAll('.extra-item-card') : [];
+        if (extraCards.length > 0) {
+          const pos1Amount = parseFloat(pos1AmountInput ? pos1AmountInput.value : 0) || 0;
+          if (pos1Amount <= 0) {
+            e.preventDefault();
+            alert('Jumlah (Rp) untuk Pos 1 harus lebih besar dari 0.');
+            if (pos1AmountInput) pos1AmountInput.focus();
+            return;
+          }
+
+          for (let i = 0; i < extraCards.length; i++) {
+            const card = extraCards[i];
+            const catSelect = card.querySelector('.extra-category-select');
+            const amtInput = card.querySelector('.extra-amount-input');
+            const posNum = i + 2;
+
+            if (!catSelect || !catSelect.value) {
+              e.preventDefault();
+              alert(`Silakan pilih Akun/Kategori untuk Pos ${posNum}.`);
+              if (catSelect) catSelect.focus();
+              return;
+            }
+
+            const amt = parseFloat(amtInput ? amtInput.value : 0) || 0;
+            if (amt <= 0) {
+              e.preventDefault();
+              alert(`Jumlah (Rp) untuk Pos ${posNum} harus lebih besar dari 0.`);
+              if (amtInput) amtInput.focus();
+              return;
+            }
+          }
+
+          // Injected hidden inputs
+          txForm.querySelectorAll('input[data-injected-item="1"]').forEach(el => el.remove());
+
+          function appendHidden(name, value) {
+            const inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = name;
+            inp.value = value;
+            inp.dataset.injectedItem = '1';
+            txForm.appendChild(inp);
+          }
+
+          const desc1 = document.getElementById('modal-desc') ? document.getElementById('modal-desc').value : '';
+          appendHidden('items[0][category_id]', hiddenInput.value);
+          appendHidden('items[0][amount]', pos1Amount);
+          appendHidden('items[0][description]', desc1);
+
+          extraCards.forEach((card, idx) => {
+            const itemIdx = idx + 1;
+            const cVal = card.querySelector('.extra-category-select').value;
+            const aVal = card.querySelector('.extra-amount-input').value;
+            const dVal = card.querySelector('.extra-desc-input').value;
+            appendHidden(`items[${itemIdx}][category_id]`, cVal);
+            appendHidden(`items[${itemIdx}][amount]`, aVal);
+            appendHidden(`items[${itemIdx}][description]`, dVal);
+          });
+        } else {
+          txForm.querySelectorAll('input[data-injected-item="1"]').forEach(el => el.remove());
         }
       }
     });
@@ -602,6 +890,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       if (saveBtn) saveBtn.textContent = 'Proses Transfer Dana';
       if (modalVoucher) modalVoucher.placeholder = 'Contoh: No. Cek Mandiri / Bukti Transfer';
+      if (window.setMultiItemHeaderVisible) window.setMultiItemHeaderVisible(false);
+      resetExtraRows();
       
       // Auto adjust to_account so it is not the same as source account
       if (accountSelect && toAccountSelect) {
@@ -620,6 +910,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (searchInput) searchInput.setAttribute('required', 'required');
       if (saveBtn) saveBtn.textContent = 'Tambah Transaksi';
       if (modalVoucher) modalVoucher.placeholder = 'Contoh: KT. 01 26.001 (Opsional)';
+      if (window.setMultiItemHeaderVisible) window.setMultiItemHeaderVisible(true);
 
       const currentId = hiddenInput.value;
       const currentCat = modalCategories.find(c => c.id == currentId);
@@ -629,6 +920,18 @@ document.addEventListener('DOMContentLoaded', function() {
       if (dropdown.style.display === 'block') {
         filterAndRender(searchInput.value);
       }
+
+      // Update options in any open extra items
+      if (extraItemsContainer) {
+        extraItemsContainer.querySelectorAll('.extra-item-card').forEach(card => {
+          const select = card.querySelector('.extra-category-select');
+          if (select) {
+            const currentVal = select.value;
+            select.innerHTML = buildCategorySelectOptions(type, currentVal);
+          }
+        });
+      }
+      updateMultiItemState();
     }
   };
 

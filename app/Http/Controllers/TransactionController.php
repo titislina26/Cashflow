@@ -43,15 +43,28 @@ class TransactionController extends Controller
             if (empty($items) && $request->filled('transaction_id')) {
                 $tx = Transaction::with(['category', 'job'])->find($request->transaction_id);
                 if ($tx) {
-                    $cleanNp = $tx->category ? str_replace(['-', ' '], '', $tx->category->code) : '';
-                    $items[] = [
-                        'no' => 1,
-                        'np' => $cleanNp,
-                        'desc' => $tx->description,
-                        'amount' => (float)$tx->amount,
-                        'ket' => $tx->ket ?? ''
-                    ];
-                    $totalAmount = (float)$tx->amount;
+                    if (!empty($tx->voucher_number)) {
+                        $sameVoucherTxs = Transaction::with(['category', 'job'])
+                            ->where('voucher_number', $tx->voucher_number)
+                            ->where('account', $tx->account)
+                            ->orderBy('id', 'asc')
+                            ->get();
+                    } else {
+                        $sameVoucherTxs = collect([$tx]);
+                    }
+
+                    $totalAmount = 0;
+                    foreach ($sameVoucherTxs as $index => $itemTx) {
+                        $cleanNp = $itemTx->category ? str_replace(['-', ' '], '', $itemTx->category->code) : '';
+                        $items[] = [
+                            'no' => $index + 1,
+                            'np' => $cleanNp,
+                            'desc' => $itemTx->description,
+                            'amount' => (float)$itemTx->amount,
+                            'ket' => $itemTx->ket ?? ''
+                        ];
+                        $totalAmount += (float)$itemTx->amount;
+                    }
                     if (empty($prodi)) {
                         $prodi = $tx->job ? $tx->job->name : 'Pusat';
                     }
@@ -223,6 +236,59 @@ class TransactionController extends Controller
             'bank_mandiri_1' => 'Bank Mandiri 1',
             'bank_mandiri_2' => 'Bank Mandiri 2',
         ];
+
+        // Handle Multi-Item Transaction (Beberapa pos pengeluaran/pemasukan dalam 1 nomor bukti)
+        if ($request->has('items') && is_array($request->items) && count($request->items) > 1) {
+            $request->validate([
+                'account' => 'required|in:petty_cash,bank_mandiri_1,bank_mandiri_2',
+                'type' => 'required|in:income,expense',
+                'date' => 'required|date',
+                'voucher_number' => 'nullable|string|max:255',
+                'job_id' => 'nullable|exists:accounting_jobs,id',
+                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+                'items' => 'required|array|min:2',
+                'items.*.category_id' => 'required|exists:categories,id',
+                'items.*.amount' => 'required|numeric|min:0.01',
+                'items.*.description' => 'nullable|string|max:1000',
+                'items.*.job_id' => 'nullable|exists:accounting_jobs,id',
+                'items.*.ket' => 'nullable|string|max:255',
+            ]);
+
+            $attachmentPath = null;
+            if ($request->hasFile('attachment')) {
+                $attachmentPath = $request->file('attachment')->store('attachments', 'public');
+            }
+
+            $savedCount = 0;
+            \Illuminate\Support\Facades\DB::transaction(function () use ($request, $attachmentPath, &$savedCount) {
+                foreach ($request->items as $item) {
+                    $description = !empty($item['description']) ? trim($item['description']) : null;
+                    if (!$description) {
+                        $cat = Category::find($item['category_id']);
+                        $description = $cat ? $cat->name : ($request->description ?: '-');
+                    }
+
+                    Transaction::create([
+                        'account' => $request->account,
+                        'type' => $request->type,
+                        'category_id' => $item['category_id'],
+                        'job_id' => !empty($item['job_id']) ? $item['job_id'] : ($request->job_id ?: null),
+                        'amount' => $item['amount'],
+                        'voucher_number' => $request->voucher_number ?: null,
+                        'date' => $request->date,
+                        'description' => $description,
+                        'ket' => !empty($item['ket']) ? $item['ket'] : ($request->ket ?: null),
+                        'attachment' => $attachmentPath,
+                    ]);
+                    $savedCount++;
+                }
+            });
+
+            session(['active_account' => $request->account]);
+            $accountName = $accountNames[$request->account] ?? $request->account;
+            $voucherText = $request->voucher_number ? " (No. Bukti: {$request->voucher_number})" : "";
+            return redirect()->back()->with('success', "{$savedCount} pos rincian transaksi{$voucherText} berhasil ditambahkan ke {$accountName}!");
+        }
 
         $request->validate([
             'account' => 'required|in:petty_cash,bank_mandiri_1,bank_mandiri_2',

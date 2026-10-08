@@ -398,6 +398,12 @@
       if (window.selectModalCategoryDefault) {
         window.selectModalCategoryDefault('expense');
       }
+      if (window.resetExtraModalItems) {
+        window.resetExtraModalItems();
+      }
+      if (window.setMultiItemHeaderVisible) {
+        window.setMultiItemHeaderVisible(true);
+      }
       updateAccountUi();
       saveBtn.textContent = 'Tambah Transaksi';
       overlay.classList.add('active');
@@ -419,6 +425,9 @@
       overlay.classList.remove('active');
       if (window.closeCategoryDropdown) {
         window.closeCategoryDropdown();
+      }
+      if (window.resetExtraModalItems) {
+        window.resetExtraModalItems();
       }
     }
 

@@ -562,6 +562,12 @@
       if (window.selectModalCategoryDefault) {
         window.selectModalCategoryDefault('expense');
       }
+      if (window.resetExtraModalItems) {
+        window.resetExtraModalItems();
+      }
+      if (window.setMultiItemHeaderVisible) {
+        window.setMultiItemHeaderVisible(true);
+      }
       updateAccountUi();
       saveBtn.textContent = 'Tambah Transaksi';
       overlay.classList.add('active');
@@ -609,6 +615,12 @@
         if (window.selectModalCategoryById) {
           window.selectModalCategoryById(catId);
         }
+        if (window.resetExtraModalItems) {
+          window.resetExtraModalItems();
+        }
+        if (window.setMultiItemHeaderVisible) {
+          window.setMultiItemHeaderVisible(false);
+        }
 
         saveBtn.textContent = 'Simpan Perubahan';
         overlay.classList.add('active');
@@ -619,6 +631,9 @@
       overlay.classList.remove('active');
       if (window.closeCategoryDropdown) {
         window.closeCategoryDropdown();
+      }
+      if (window.resetExtraModalItems) {
+        window.resetExtraModalItems();
       }
     }
 
@@ -760,9 +775,24 @@
           document.getElementById('voucher-number').value = `KT.${y}.${m} ${paddedId}`;
         }
 
-        // Reset items container and add the first transaction item
+        // Reset items container and populate all items sharing this voucher number
         itemsContainer.innerHTML = '';
-        addVoucherRow(txDesc, txNp, txAmount, txKet);
+        const siblingBtns = (txVoucher && txVoucher !== '' && txVoucher !== '—')
+          ? Array.from(document.querySelectorAll(`.btn-print-voucher[data-voucher="${CSS.escape(txVoucher)}"]`))
+          : [];
+
+        if (siblingBtns.length > 1) {
+          siblingBtns.forEach(sBtn => {
+            addVoucherRow(
+              sBtn.dataset.description,
+              sBtn.dataset.np || '',
+              parseFloat(sBtn.dataset.amount) || 0,
+              sBtn.dataset.ket || ''
+            );
+          });
+        } else {
+          addVoucherRow(txDesc, txNp, txAmount, txKet);
+        }
 
         voucherOverlay.classList.add('active');
       });
