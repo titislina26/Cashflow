@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function escapeHtml(str) {
-    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return (str || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   const toAccountGroup = document.getElementById('form-group-to-account');
@@ -420,22 +420,42 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function buildCategorySelectOptions(type, selectedId = null) {
-    const cats = getCategoriesForType(type);
-    let html = '<option value="">-- Pilih Akun / Kategori (COA) --</option>';
-    let found = false;
-    cats.forEach(c => {
-      const isSelected = selectedId && (c.id == selectedId);
-      if (isSelected) found = true;
-      const label = c.code ? `[${c.code}] ${c.name}` : c.name;
-      html += `<option value="${c.id}" ${isSelected ? 'selected' : ''}>${escapeHtml(label)}</option>`;
-    });
-    if (selectedId && !found) {
-      const specificCat = modalCategories.find(c => c.id == selectedId);
-      if (specificCat) {
-        const label = specificCat.code ? `[${specificCat.code}] ${specificCat.name}` : specificCat.name;
-        html += `<option value="${specificCat.id}" selected>${escapeHtml(label)}</option>`;
-      }
+    if (type === 'transfer') {
+      const specificCat = modalCategories.find(c => c.code === '1-1100') || modalCategories.find(c => c.id == transferCatId);
+      const label = specificCat ? (specificCat.code ? `[${specificCat.code}] ${specificCat.name}` : specificCat.name) : '[1-1100] Kas dan Setara Kas';
+      return `<option value="${specificCat ? specificCat.id : '60'}" selected>${escapeHtml(label)}</option>`;
     }
+
+    const typeOrder = (type === 'income')
+      ? ['income', 'asset', 'liability', 'equity', 'expense']
+      : ['expense', 'asset', 'liability', 'equity', 'income'];
+
+    const typeLabels = {
+      expense: 'Beban & Pengeluaran',
+      income: 'Pendapatan & Penerimaan',
+      asset: 'Aset / Piutang / Panjar',
+      liability: 'Kewajiban / Hutang',
+      equity: 'Ekuitas / Modal'
+    };
+
+    let html = '<option value="">-- Pilih Akun / Kategori (COA) --</option>';
+
+    typeOrder.forEach(t => {
+      const groupCats = modalCategories.filter(c => c.type === t)
+        .sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+
+      if (groupCats.length > 0) {
+        const groupTitle = typeLabels[t] || t.toUpperCase();
+        html += `<optgroup label="── ${groupTitle} ──">`;
+        groupCats.forEach(c => {
+          const isSelected = selectedId && (c.id == selectedId);
+          const cLabel = c.code ? `[${c.code}] ${c.name}` : c.name;
+          html += `<option value="${c.id}" ${isSelected ? 'selected' : ''}>${escapeHtml(cLabel)}</option>`;
+        });
+        html += `</optgroup>`;
+      }
+    });
+
     return html;
   }
 
