@@ -1173,12 +1173,28 @@ class ReportController extends Controller
         $endDate = $request->get('end_date', Carbon::now()->toDateString());
         $categoryId = $request->get('category_id', 'all');
         $jobId = $request->get('job_id', 'all');
+        $onlyActive = $request->has('only_active') ? $request->boolean('only_active') : true;
 
         $data = $this->getGeneralLedgerData($categoryId, $startDate, $endDate, $jobId);
         $categories = Category::orderBy('code', 'asc')->get();
         $jobs = \App\Models\AccountingJob::academicOrder()->get();
 
-        return view('reports.general-ledger', array_merge($data, compact('activeAccount', 'categories', 'jobs')));
+        $totalAccountsCount = count($data['ledgerData']);
+        $activeAccountsCount = collect($data['ledgerData'])->filter(fn($item) => count($item['transactions']) > 0)->count();
+
+        // If onlyActive is true and viewing all categories, filter out accounts without transactions
+        if ($onlyActive && $categoryId === 'all') {
+            $data['ledgerData'] = array_values(array_filter($data['ledgerData'], fn($item) => count($item['transactions']) > 0));
+        }
+
+        return view('reports.general-ledger', array_merge($data, compact(
+            'activeAccount', 
+            'categories', 
+            'jobs', 
+            'onlyActive', 
+            'totalAccountsCount', 
+            'activeAccountsCount'
+        )));
     }
 
     public function exportGeneralLedgerCsv(Request $request)
