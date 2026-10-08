@@ -30,6 +30,8 @@ Route::prefix('transactions')->name('transactions.')->group(function () {
     Route::put('/{id}', [TransactionController::class, 'update'])->name('update');
     Route::delete('/bulk-delete', [TransactionController::class, 'bulkDelete'])->name('bulk-delete');
     Route::delete('/{id}', [TransactionController::class, 'destroy'])->name('destroy');
+    Route::post('/{id}/restore', [TransactionController::class, 'restore'])->name('restore');
+    Route::delete('/{id}/force', [TransactionController::class, 'forceDelete'])->name('force-delete');
     Route::get('/export-csv', [TransactionController::class, 'exportCsv'])->name('export-csv');
 });
 

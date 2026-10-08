@@ -100,4 +100,74 @@ class MultiItemTransactionTest extends TestCase
             'description' => 'Snack Rapat Koordinasi',
         ]);
     }
+
+    public function test_can_soft_delete_and_restore_transaction()
+    {
+        $cat = Category::create([
+            'code' => '6-4000',
+            'name' => 'Biaya Sampah',
+            'type' => 'expense',
+            'icon' => 'tag',
+            'color' => '#6366f1',
+        ]);
+
+        $tx = Transaction::create([
+            'account' => 'petty_cash',
+            'type' => 'expense',
+            'category_id' => $cat->id,
+            'amount' => 120000,
+            'date' => '2026-01-17',
+            'voucher_number' => 'KT.01.26.003',
+            'description' => 'Pembayaran Sampah',
+        ]);
+
+        // 1. Soft Delete
+        $response = $this->delete(route('transactions.destroy', $tx->id));
+        $response->assertRedirect();
+        $response->assertSessionHas('success_deleted');
+
+        // Harus hilang dari query reguler
+        $this->assertNull(Transaction::find($tx->id));
+        // Tapi tetap ada di database dengan deleted_at
+        $this->assertNotNull(Transaction::withTrashed()->find($tx->id)->deleted_at);
+
+        // 2. Restore
+        $restoreResp = $this->post(route('transactions.restore', $tx->id));
+        $restoreResp->assertRedirect();
+        $restoreResp->assertSessionHas('success');
+
+        // Kembali ada di query reguler
+        $this->assertNotNull(Transaction::find($tx->id));
+        $this->assertNull(Transaction::find($tx->id)->deleted_at);
+    }
+
+    public function test_can_force_delete_transaction()
+    {
+        $cat = Category::create([
+            'code' => '6-5000',
+            'name' => 'Biaya Lain',
+            'type' => 'expense',
+            'icon' => 'tag',
+            'color' => '#6366f1',
+        ]);
+
+        $tx = Transaction::create([
+            'account' => 'petty_cash',
+            'type' => 'expense',
+            'category_id' => $cat->id,
+            'amount' => 50000,
+            'date' => '2026-01-18',
+            'voucher_number' => 'KT.01.26.004',
+            'description' => 'Biaya Lain-Lain',
+        ]);
+
+        $tx->delete();
+
+        $forceResp = $this->delete(route('transactions.force-delete', $tx->id));
+        $forceResp->assertRedirect();
+        $forceResp->assertSessionHas('success');
+
+        // Benar-benar hilang permanen dari database
+        $this->assertNull(Transaction::withTrashed()->find($tx->id));
+    }
 }

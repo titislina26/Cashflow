@@ -132,6 +132,22 @@
         <span class="toast-message">{{ session('success') }}</span>
       </div>
     @endif
+    @if(session('success_deleted'))
+      <div class="toast success show" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 320px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="toast-icon"><x-lucide-trash-2 style="color: #fca5a5;" /></span>
+          <span class="toast-message">{{ session('success_deleted')['message'] }}</span>
+        </div>
+        @if(!empty(session('success_deleted')['id']))
+          <form action="{{ route('transactions.restore', session('success_deleted')['id']) }}" method="POST" style="margin: 0;">
+            @csrf
+            <button type="submit" class="btn btn-sm" style="background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4); color: white; padding: 3px 8px; font-size: 0.75rem; border-radius: 4px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+              Urungkan
+            </button>
+          </form>
+        @endif
+      </div>
+    @endif
     @if(session('error'))
       <div class="toast error show">
         <span class="toast-icon"><x-lucide-alert-circle /></span>

@@ -27,6 +27,18 @@
       <button class="btn btn-secondary" id="btn-transfer-header" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:#4338ca; font-weight:600">
         <x-lucide-arrow-left-right /> Transfer Kas
       </button>
+      @if($isTrash)
+        <a href="{{ route('transactions.index', array_merge(request()->except(['status', 'page']))) }}" class="btn btn-secondary" style="text-decoration:none; background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.3);">
+          <x-lucide-arrow-left /> Kembali ke Buku Kas
+        </a>
+      @else
+        <a href="{{ route('transactions.index', array_merge(request()->except('page'), ['status' => 'trash'])) }}" class="btn btn-secondary" style="text-decoration:none; {{ $trashedCount > 0 ? 'border-color: rgba(239, 68, 68, 0.4); color: #f87171;' : '' }}" title="Lihat transaksi yang telah dihapus">
+          <x-lucide-trash-2 /> Sampah
+          @if($trashedCount > 0)
+            <span class="badge" style="background:#ef4444; color:white; padding:2px 7px; border-radius:10px; font-size:0.72rem; margin-left:4px;">{{ $trashedCount }}</span>
+          @endif
+        </a>
+      @endif
       <button class="btn btn-primary" id="btn-add-tx">
         <x-lucide-plus /> Transaksi Baru
       </button>
@@ -150,6 +162,18 @@
   </div>
 
   <!-- Transactions Table -->
+  @if($isTrash)
+    <div style="padding: 12px 18px; margin-bottom: 14px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 10px; color: #fca5a5; font-size: 0.88rem;">
+        <x-lucide-trash-2 style="width: 20px; height: 20px; color: #ef4444; flex-shrink: 0;" />
+        <span><strong>Folder Sampah Transaksi ({{ $trashedCount }} Item):</strong> Menampilkan transaksi yang telah dihapus. Anda dapat <strong>Memulihkan</strong> kembali transaksi ke Buku Kas atau <strong>Menghapus Permanen</strong>.</span>
+      </div>
+      <a href="{{ route('transactions.index', request()->except(['status', 'page'])) }}" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">
+        <x-lucide-arrow-left style="width: 14px; height: 14px;" /> Kembali ke Buku Kas
+      </a>
+    </div>
+  @endif
+
   <div class="card">
     <div class="table-container">
       <table class="data-table" id="tx-table">
@@ -178,8 +202,12 @@
           @if($transactions->isEmpty())
             <tr>
               <td colspan="9" style="text-align:center; padding: 40px 0;">
-                <div class="empty-state-title" style="font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 5px;">Belum ada data transaksi</div>
-                <div class="empty-state-desc" style="font-size: 0.85rem; color: var(--text-muted);">Tidak ada transaksi yang cocok dengan filter aktif.</div>
+                <div class="empty-state-title" style="font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 5px;">
+                  {{ $isTrash ? 'Folder Sampah Kosong' : 'Belum ada data transaksi' }}
+                </div>
+                <div class="empty-state-desc" style="font-size: 0.85rem; color: var(--text-muted);">
+                  {{ $isTrash ? 'Tidak ada transaksi yang sedang dihapus di akun ini.' : 'Tidak ada transaksi yang cocok dengan filter aktif.' }}
+                </div>
               </td>
             </tr>
           @else
@@ -254,50 +282,60 @@
                 </td>
                 <td style="text-align:center">
                   <div style="display:flex; gap:4px; justify-content:center">
-                    <button class="btn btn-secondary btn-sm btn-print-voucher" 
-                      data-id="{{ $tx->id }}"
-                      data-voucher="{{ $tx->voucher_number }}"
-                      data-amount="{{ (float) $tx->amount }}"
-                      data-description="{{ $tx->description }}"
-                      data-date="{{ $tx->date->format('Y-m-d') }}"
-                      data-type="{{ $tx->type }}"
-                      data-ket="{{ $tx->ket }}"
-                      data-np="{{ $tx->category ? str_replace(['-', ' '], '', $tx->category->code) : '' }}"
-                      data-prodi="{{ $tx->job ? $tx->job->name : 'Pusat' }}"
-                      style="padding: 4px 6px"
-                      title="Cetak Voucer Bukti">
-                      <x-lucide-printer style="width:14px; height:14px;" />
-                    </button>
-                    @if($tx->attachment)
-                      <a href="{{ Storage::url($tx->attachment) }}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 4px 6px" title="Lihat Lampiran Dokumen">
-                        <x-lucide-paperclip style="width:14px; height:14px;" />
-                      </a>
-                    @endif
-                    <button class="btn btn-secondary btn-sm btn-edit-tx" 
-                      data-id="{{ $tx->id }}"
-                      data-account="{{ $tx->account }}"
-                      data-type="{{ $tx->type }}"
-                      data-category-id="{{ $tx->category_id }}"
-                      data-job-id="{{ $tx->job_id }}"
-                      data-date="{{ $tx->date->format('Y-m-d') }}"
-                      data-amount="{{ (float) $tx->amount }}"
-                      data-description="{{ $tx->description }}"
-                      data-ket="{{ $tx->ket }}"
-                      data-voucher="{{ $tx->voucher_number }}"
-                      style="padding: 4px 6px"
-                      title="Edit Transaksi">
-                      <x-lucide-edit-3 style="width:14px; height:14px;" />
-                    </button>
-                    @if(str_starts_with($tx->description ?? '', '[PEMBATALAN]'))
-                      <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.7rem; padding: 3px 6px;" title="Transaksi ini adalah jurnal pembalik koreksi">
-                        Pembalik
-                      </span>
-                    @else
-                      <form action="{{ route('transactions.destroy', $tx->id) }}" method="POST" onsubmit="return confirm('Batalkan transaksi ini dengan Jurnal Pembalik? Transaksi asal tetap tersimpan untuk audit trail dan sistem akan mencatat transaksi pembalik otomatis.')" style="display:inline">
+                    @if($isTrash)
+                      <form action="{{ route('transactions.restore', $tx->id) }}" method="POST" style="display:inline">
+                        @csrf
+                        <button type="submit" class="btn btn-sm" style="padding: 4px 8px; background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="Pulihkan / Kembalikan transaksi ini ke Buku Kas">
+                          <x-lucide-rotate-ccw style="width:13px; height:13px;" /> Pulihkan
+                        </button>
+                      </form>
+                      <form action="{{ route('transactions.force-delete', $tx->id) }}" method="POST" onsubmit="return confirm('Hapus permanen transaksi ini selamanya? Data tidak dapat dipulihkan kembali.')" style="display:inline">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="btn btn-sm" style="padding: 4px 6px; background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);" title="Batalkan Transaksi (Jurnal Pembalik)">
-                          <x-lucide-rotate-ccw style="width:14px; height:14px;" />
+                        <button type="submit" class="btn btn-sm" style="padding: 4px 8px; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="Hapus Selamanya Secara Permanen">
+                          <x-lucide-trash-2 style="width:13px; height:13px;" /> Hapus Permanen
+                        </button>
+                      </form>
+                    @else
+                      <button class="btn btn-secondary btn-sm btn-print-voucher" 
+                        data-id="{{ $tx->id }}"
+                        data-voucher="{{ $tx->voucher_number }}"
+                        data-amount="{{ (float) $tx->amount }}"
+                        data-description="{{ $tx->description }}"
+                        data-date="{{ $tx->date->format('Y-m-d') }}"
+                        data-type="{{ $tx->type }}"
+                        data-ket="{{ $tx->ket }}"
+                        data-np="{{ $tx->category ? str_replace(['-', ' '], '', $tx->category->code) : '' }}"
+                        data-prodi="{{ $tx->job ? $tx->job->name : 'Pusat' }}"
+                        style="padding: 4px 6px"
+                        title="Cetak Voucer Bukti">
+                        <x-lucide-printer style="width:14px; height:14px;" />
+                      </button>
+                      @if($tx->attachment)
+                        <a href="{{ Storage::url($tx->attachment) }}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 4px 6px" title="Lihat Lampiran Dokumen">
+                          <x-lucide-paperclip style="width:14px; height:14px;" />
+                        </a>
+                      @endif
+                      <button class="btn btn-secondary btn-sm btn-edit-tx" 
+                        data-id="{{ $tx->id }}"
+                        data-account="{{ $tx->account }}"
+                        data-type="{{ $tx->type }}"
+                        data-category-id="{{ $tx->category_id }}"
+                        data-job-id="{{ $tx->job_id }}"
+                        data-date="{{ $tx->date->format('Y-m-d') }}"
+                        data-amount="{{ (float) $tx->amount }}"
+                        data-description="{{ $tx->description }}"
+                        data-ket="{{ $tx->ket }}"
+                        data-voucher="{{ $tx->voucher_number }}"
+                        style="padding: 4px 6px"
+                        title="Edit Transaksi">
+                        <x-lucide-edit-3 style="width:14px; height:14px;" />
+                      </button>
+                      <form action="{{ route('transactions.destroy', $tx->id) }}" method="POST" onsubmit="return confirm('Hapus transaksi ini? (Transaksi dapat dipulihkan kembali dari menu Sampah)')" style="display:inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-sm" style="padding: 4px 6px; background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);" title="Hapus ke Sampah (Bisa Dipulihkan)">
+                          <x-lucide-trash-2 style="width:14px; height:14px;" />
                         </button>
                       </form>
                     @endif

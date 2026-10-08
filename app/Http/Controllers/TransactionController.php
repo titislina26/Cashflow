@@ -140,8 +140,13 @@ class TransactionController extends Controller
         // Fetch all active/available jobs for dropdowns
         $jobs = \App\Models\AccountingJob::academicOrder()->get();
 
+        $isTrash = $request->get('status') === 'trash';
+        $trashedCount = Transaction::onlyTrashed()->where('account', $activeAccount)->count();
+
         // Build transaction query
-        $query = Transaction::with(['category', 'job'])->where('account', $activeAccount);
+        $query = $isTrash
+            ? Transaction::onlyTrashed()->with(['category', 'job'])->where('account', $activeAccount)
+            : Transaction::with(['category', 'job'])->where('account', $activeAccount);
 
         // Filter: Search
         if ($request->filled('search')) {
@@ -225,7 +230,9 @@ class TransactionController extends Controller
             'filteredExpense',
             'filteredNet',
             'sortColumn',
-            'sortDirection'
+            'sortDirection',
+            'isTrash',
+            'trashedCount'
         ));
     }
 
@@ -429,92 +436,72 @@ class TransactionController extends Controller
     public function destroy($id)
     {
         $transaction = Transaction::findOrFail($id);
+        $desc = $transaction->description ?: 'Transaksi';
+        $voucher = $transaction->voucher_number ? " [{$transaction->voucher_number}]" : "";
+        $deletedId = $transaction->id;
 
-        // Validasi: Cek apakah transaksi sudah merupakan transaksi pembalik atau sudah pernah dibatalkan
-        if (str_starts_with($transaction->description ?? '', '[PEMBATALAN]')) {
-            return redirect()->back()->with('error', 'Transaksi pembalik tidak dapat dibatalkan kembali!');
-        }
-
-        $alreadyCancelled = Transaction::where('related_transaction_id', $transaction->id)
-            ->where('description', 'like', '[PEMBATALAN]%')
-            ->exists();
-        if ($alreadyCancelled) {
-            return redirect()->back()->with('error', 'Transaksi ini sudah pernah dibatalkan sebelumnya dengan Jurnal Pembalik!');
-        }
-
-        // 1. Buat transaksi pembalik untuk transaksi ini (Audit Trail: Data asli tetap tersimpan)
-        $oppositeType = $transaction->type === 'expense' ? 'income' : 'expense';
-        $reversal = Transaction::create([
-            'account' => $transaction->account,
-            'type' => $oppositeType,
-            'amount' => $transaction->amount,
-            'category_id' => $transaction->category_id,
-            'job_id' => $transaction->job_id,
-            'date' => now()->toDateString(),
-            'voucher_number' => 'REV-' . ($transaction->voucher_number ?: $transaction->id),
-            'description' => '[PEMBATALAN] ' . ($transaction->description ?: 'Transaksi') . ' (Ref ID: #' . $transaction->id . ')',
-            'ket' => 'Jurnal Pembalik Koreksi Transaksi #' . $transaction->id,
-            'related_transaction_id' => $transaction->id,
-        ]);
-
-        // 2. Jika merupakan transaksi transfer antar kas/bank, balikkan juga pasangan transfernya
+        // Jika transaksi transfer berpasangan, soft-delete juga pasangannya
         if ($transaction->type === 'transfer' && $transaction->related_transaction_id) {
             $related = Transaction::find($transaction->related_transaction_id);
             if ($related) {
-                Transaction::create([
-                    'account' => $related->account,
-                    'type' => $related->type === 'income' ? 'expense' : 'income',
-                    'amount' => $related->amount,
-                    'category_id' => $related->category_id,
-                    'job_id' => $related->job_id,
-                    'date' => now()->toDateString(),
-                    'voucher_number' => 'REV-' . ($related->voucher_number ?: $related->id),
-                    'description' => '[PEMBATALAN] ' . ($related->description ?: 'Transfer') . ' (Ref ID: #' . $related->id . ')',
-                    'ket' => 'Jurnal Pembalik Transfer #' . $related->id,
-                    'related_transaction_id' => $related->id,
-                ]);
+                $related->delete();
             }
         }
 
-        // 3. Jika berasal dari Jurnal Umum (General Journal), buat Jurnal Pembalik berpasangan
-        if ($transaction->journal_entry_id) {
-            $originalJe = \App\Models\JournalEntry::find($transaction->journal_entry_id);
-            if ($originalJe) {
-                $revJe = \App\Models\JournalEntry::create([
-                    'journal_number' => 'REV-' . $originalJe->journal_number,
-                    'date' => now()->toDateString(),
-                    'memo' => '[PEMBATALAN] ' . $originalJe->memo,
-                    'total_amount' => $originalJe->total_amount,
-                ]);
-                $reversal->update(['journal_entry_id' => $revJe->id]);
+        $transaction->delete();
 
-                $siblings = Transaction::where('journal_entry_id', $originalJe->id)
-                    ->where('id', '!=', $transaction->id)
-                    ->get();
-                foreach ($siblings as $sib) {
-                    Transaction::create([
-                        'account' => $sib->account,
-                        'type' => $sib->type === 'expense' ? 'income' : 'expense',
-                        'amount' => $sib->amount,
-                        'category_id' => $sib->category_id,
-                        'job_id' => $sib->job_id,
-                        'date' => now()->toDateString(),
-                        'voucher_number' => 'REV-' . ($sib->voucher_number ?: $sib->id),
-                        'description' => '[PEMBATALAN] ' . ($sib->description ?: '') . ' (Ref ID: #' . $sib->id . ')',
-                        'ket' => 'Jurnal Pembalik #' . $sib->id,
-                        'related_transaction_id' => $sib->id,
-                        'journal_entry_id' => $revJe->id,
-                    ]);
+        return redirect()->back()->with('success_deleted', [
+            'id' => $deletedId,
+            'message' => "Transaksi{$voucher} \"{$desc}\" berhasil dipindahkan ke Sampah.",
+        ]);
+    }
+
+    public function restore($id)
+    {
+        $transaction = Transaction::onlyTrashed()->findOrFail($id);
+        $desc = $transaction->description ?: 'Transaksi';
+        $voucher = $transaction->voucher_number ? " [{$transaction->voucher_number}]" : "";
+
+        // Jika transaksi transfer berpasangan, pulihkan juga pasangannya
+        if ($transaction->type === 'transfer' && $transaction->related_transaction_id) {
+            $related = Transaction::onlyTrashed()->find($transaction->related_transaction_id);
+            if ($related) {
+                $related->restore();
+            }
+        }
+
+        $transaction->restore();
+
+        return redirect()->back()->with('success', "Transaksi{$voucher} \"{$desc}\" berhasil dipulihkan kembali ke Buku Kas!");
+    }
+
+    public function forceDelete($id)
+    {
+        $transaction = Transaction::onlyTrashed()->findOrFail($id);
+        $desc = $transaction->description ?: 'Transaksi';
+
+        if ($transaction->attachment) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($transaction->attachment);
+        }
+
+        if ($transaction->type === 'transfer' && $transaction->related_transaction_id) {
+            $related = Transaction::onlyTrashed()->find($transaction->related_transaction_id);
+            if ($related) {
+                if ($related->attachment) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($related->attachment);
                 }
+                $related->forceDelete();
             }
         }
 
-        return redirect()->back()->with('success', 'Transaksi berhasil dibatalkan melalui Jurnal Pembalik otomatis. Data asal tetap tersimpan untuk audit trail!');
+        $transaction->forceDelete();
+
+        return redirect()->back()->with('success', "Transaksi \"{$desc}\" telah dihapus secara permanen.");
     }
 
     public function bulkDelete(Request $request)
     {
-        return redirect()->back()->with('error', 'Sesuai standar audit akuntansi (Tabel 3.3 proposal), fitur hapus massal dinonaktifkan. Silakan gunakan pembatalan lewat Jurnal Pembalik.');
+        return redirect()->back()->with('error', 'Silakan gunakan tombol Hapus pada masing-masing transaksi.');
     }
 
     public function exportCsv(Request $request)
