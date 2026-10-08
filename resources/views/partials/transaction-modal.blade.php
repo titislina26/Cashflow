@@ -113,8 +113,20 @@
           <div class="form-row">
             <div class="form-group" id="form-group-category" style="margin-bottom: 10px;">
               <label class="form-label" id="modal-category-label">Akun / Kategori</label>
-              <select class="form-select" name="category_id" id="modal-category" required>
-              </select>
+              <div class="cat-search-wrapper" id="modal-category-wrapper">
+                <div class="cat-search-input-box">
+                  <span class="cat-selected-icon" id="modal-category-selected-icon">
+                    <x-lucide-tag style="width:16px; height:16px; color:var(--text-muted);" />
+                  </span>
+                  <input type="text" class="form-input cat-search-input" id="modal-category-search" 
+                    placeholder="Ketik kode atau nama akun..." autocomplete="off" required />
+                  <button type="button" class="cat-search-clear" id="modal-category-clear" title="Hapus pilihan" aria-label="Hapus pilihan" style="display: none;">
+                    <x-lucide-x style="width:14px; height:14px;" />
+                  </button>
+                </div>
+                <input type="hidden" name="category_id" class="cat-category-id" id="modal-category" />
+                <div id="modal-category-dropdown" class="cat-dropdown-menu"></div>
+              </div>
               <div id="modal-transfer-badge" style="display: none; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; color: var(--color-primary, #3b82f6); line-height: 1.35;">
                 <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem;">
                   <x-lucide-arrow-left-right style="width:16px; height:16px;" /> [1-1100] Kas dan Setara Kas
@@ -245,6 +257,121 @@
 </div>
 
 <style>
+  .cat-search-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  .cat-search-input-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+  .cat-selected-icon {
+    position: absolute;
+    left: 12px;
+    pointer-events: none;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cat-search-input {
+    padding-left: 38px !important;
+    padding-right: 32px !important;
+    width: 100%;
+    cursor: text;
+  }
+  .cat-search-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    font-size: 0.85rem;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    line-height: 1;
+    display: none;
+    z-index: 2;
+    align-items: center;
+    justify-content: center;
+  }
+  .cat-search-clear:hover {
+    color: var(--text-primary, #0f172a);
+    background: var(--bg-glass-hover, rgba(0, 0, 0, 0.05));
+  }
+  .cat-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary, #ffffff);
+    border: 1px solid var(--border-primary, rgba(22, 34, 82, 0.12));
+    border-radius: 10px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    max-height: 230px;
+    overflow-y: auto;
+    z-index: 1050;
+    display: none;
+  }
+  .cat-dropdown-header {
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #64748b);
+    border-bottom: 1px solid var(--border-primary, rgba(22, 34, 82, 0.06));
+    background: var(--bg-glass, rgba(22, 34, 82, 0.02));
+    display: flex;
+    justify-content: space-between;
+  }
+  .cat-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border-bottom: 1px solid var(--border-primary, rgba(22, 34, 82, 0.04));
+  }
+  .cat-dropdown-item:last-child {
+    border-bottom: none;
+  }
+  .cat-dropdown-item:hover,
+  .cat-dropdown-item.active-item {
+    background: rgba(99, 102, 241, 0.09);
+  }
+  .cat-dropdown-item-code {
+    font-family: monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--color-primary, #4f46e5);
+    flex-shrink: 0;
+  }
+  .cat-dropdown-item-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary, #0f172a);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cat-dropdown-empty {
+    padding: 16px 12px;
+    text-align: center;
+    color: var(--text-muted, #64748b);
+    font-size: 0.85rem;
+  }
   .btn-prefix-chip {
     display: inline-flex;
     align-items: center;
@@ -287,7 +414,6 @@ document.addEventListener('DOMContentLoaded', function() {
     @endforeach
   ];
 
-  const categorySelect = document.getElementById('modal-category');
   const typeInput = document.getElementById('modal-type');
   const txForm = document.getElementById('tx-modal-form');
   const transferCat = modalCategories.find(c => c.code === '1-1100') || { id: '60' };
@@ -297,34 +423,28 @@ document.addEventListener('DOMContentLoaded', function() {
     return typeInput ? typeInput.value : 'expense';
   }
 
-  function setSelectedCategoryById(id) {
-    if (!categorySelect) return;
-    if (id) {
-      let option = categorySelect.querySelector(`option[value="${id}"]`);
-      if (!option) {
-        const specificCat = modalCategories.find(c => c.id == id);
-        if (specificCat) {
-          const label = specificCat.code ? `[${specificCat.code}] ${specificCat.name}` : specificCat.name;
-          const newOpt = document.createElement('option');
-          newOpt.value = specificCat.id;
-          newOpt.textContent = label;
-          categorySelect.appendChild(newOpt);
-        }
-      }
-      categorySelect.value = id;
-    } else {
-      categorySelect.value = '';
-    }
+  function escapeHtml(str) {
+    return (str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
-  function setDefaultCategoryForType(type) {
-    if (categorySelect) {
-      categorySelect.innerHTML = buildCategorySelectOptions(type);
-    }
+  function highlightMatch(text, query) {
+    if (!query || !text) return escapeHtml(text);
+    const q = query.trim();
+    if (!q) return escapeHtml(text);
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return escapeHtml(text);
+    const before = escapeHtml(text.substring(0, idx));
+    const match = escapeHtml(text.substring(idx, idx + q.length));
+    const after = escapeHtml(text.substring(idx + q.length));
+    return `${before}<mark style="background: rgba(245, 158, 11, 0.35); color: inherit; padding: 0 1px; border-radius: 2px;">${match}</mark>${after}`;
   }
 
-  function closeDropdown() {
-    // Native select, no popup to close
+  function getCategoryLabel(cat) {
+    return cat.code ? `[${cat.code}] ${cat.name}` : cat.name;
   }
 
   function getCategoriesForType(type, query = '') {
@@ -346,8 +466,232 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  function escapeHtml(str) {
-    return (str || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  function initCategorySearch(wrapper) {
+    if (!wrapper) return null;
+    const iconSpan = wrapper.querySelector('.cat-selected-icon');
+    const searchInput = wrapper.querySelector('.cat-search-input');
+    const clearBtn = wrapper.querySelector('.cat-search-clear');
+    const hiddenInput = wrapper.querySelector('.cat-category-id');
+    const dropdown = wrapper.querySelector('.cat-dropdown-menu');
+
+    let currentFiltered = [];
+    let activeIndex = -1;
+
+    function setSelectedCategory(cat) {
+      if (!cat) {
+        hiddenInput.value = '';
+        searchInput.value = '';
+        if (iconSpan) {
+          iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><circle cx="7" cy="7" r=".5" fill="currentColor"/></svg>';
+        }
+        if (clearBtn) clearBtn.style.display = 'none';
+        return;
+      }
+      hiddenInput.value = cat.id;
+      searchInput.value = getCategoryLabel(cat);
+      if (iconSpan) {
+        iconSpan.innerHTML = `<span style="width:12px; height:12px; border-radius:50%; background:${cat.color || '#6366f1'}; display:inline-block;"></span>`;
+      }
+      if (clearBtn) clearBtn.style.display = 'flex';
+      closeDropdown();
+    }
+
+    function setSelectedCategoryById(id) {
+      const cat = modalCategories.find(c => c.id == id);
+      if (cat) {
+        setSelectedCategory(cat);
+      } else if (!id) {
+        setSelectedCategory(null);
+      }
+    }
+
+    function renderDropdown(items, query) {
+      currentFiltered = items;
+      activeIndex = -1;
+
+      if (!items.length) {
+        dropdown.innerHTML = `
+          <div class="cat-dropdown-empty">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 6px; display:block; color:var(--text-muted);"><circle cx="10" cy="10" r="7"/><path d="m21 21-4.3-4.3"/><path d="m8 8 4 4"/><path d="m12 8-4 4"/></svg>
+            Tidak ada akun yang cocok dengan "<strong>${escapeHtml(query)}</strong>"
+          </div>
+        `;
+        dropdown.style.display = 'block';
+        return;
+      }
+
+      let html = `
+        <div class="cat-dropdown-header">
+          <span>Daftar Akun (${items.length})</span>
+          <span>Gunakan ↑↓ Enter</span>
+        </div>
+      `;
+
+      items.forEach((cat, idx) => {
+        const isSelected = (hiddenInput.value == cat.id);
+        const codeBadge = cat.code 
+          ? `<span class="cat-dropdown-item-code">${highlightMatch(cat.code, query)}</span>`
+          : '';
+        html += `
+          <div class="cat-dropdown-item ${isSelected ? 'active-item' : ''}" data-index="${idx}" data-id="${cat.id}">
+            <span style="width: 10px; height: 10px; border-radius: 50%; background: ${cat.color || '#6366f1'}; display: inline-block; flex-shrink: 0;"></span>
+            ${codeBadge}
+            <span class="cat-dropdown-item-name">${highlightMatch(cat.name, query)}</span>
+          </div>
+        `;
+      });
+
+      dropdown.innerHTML = html;
+      dropdown.style.display = 'block';
+
+      dropdown.querySelectorAll('.cat-dropdown-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setSelectedCategoryById(el.dataset.id);
+        });
+      });
+    }
+
+    function filterAndRender(query) {
+      const type = getCurrentType();
+      const matched = getCategoriesForType(type, query);
+      renderDropdown(matched, query);
+    }
+
+    function openDropdown() {
+      // Close other dropdowns first
+      document.querySelectorAll('.cat-dropdown-menu').forEach(d => {
+        if (d !== dropdown) {
+          d.style.display = 'none';
+          d.innerHTML = '';
+        }
+      });
+      filterAndRender(searchInput.value);
+    }
+
+    function closeDropdown() {
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      activeIndex = -1;
+    }
+
+    function updateActiveItem(items) {
+      items.forEach((item, idx) => {
+        if (idx === activeIndex) {
+          item.classList.add('active-item');
+          item.scrollIntoView({ block: 'nearest' });
+        } else {
+          item.classList.remove('active-item');
+        }
+      });
+    }
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (dropdown.style.display === 'block') {
+        const items = dropdown.querySelectorAll('.cat-dropdown-item');
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (items.length > 0) {
+            activeIndex = (activeIndex + 1) % items.length;
+            updateActiveItem(items);
+          }
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (items.length > 0) {
+            activeIndex = (activeIndex - 1 + items.length) % items.length;
+            updateActiveItem(items);
+          }
+        } else if (e.key === 'Enter') {
+          if (activeIndex >= 0 && items[activeIndex]) {
+            e.preventDefault();
+            items[activeIndex].click();
+          } else if (currentFiltered.length > 0) {
+            e.preventDefault();
+            setSelectedCategory(currentFiltered[0]);
+          }
+        } else if (e.key === 'Escape') {
+          closeDropdown();
+        }
+      } else {
+        if (e.key === 'ArrowDown' || e.key === 'Enter') {
+          openDropdown();
+        }
+      }
+    });
+
+    searchInput.addEventListener('input', () => {
+      hiddenInput.value = '';
+      clearBtn.style.display = searchInput.value ? 'flex' : 'none';
+      filterAndRender(searchInput.value);
+    });
+
+    searchInput.addEventListener('focus', () => {
+      searchInput.select();
+      openDropdown();
+    });
+
+    clearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setSelectedCategory(null);
+      searchInput.focus();
+      openDropdown();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!wrapper.contains(e.target)) {
+        closeDropdown();
+        if (hiddenInput.value) {
+          const cat = modalCategories.find(c => c.id == hiddenInput.value);
+          if (cat) {
+            searchInput.value = getCategoryLabel(cat);
+            if (iconSpan) {
+              iconSpan.innerHTML = `<span style="width:12px; height:12px; border-radius:50%; background:${cat.color || '#6366f1'}; display:inline-block;"></span>`;
+            }
+          }
+        }
+      }
+    });
+
+    return {
+      wrapper,
+      searchInput,
+      hiddenInput,
+      setSelectedCategory,
+      setSelectedCategoryById,
+      openDropdown,
+      closeDropdown,
+      filterAndRender,
+      setDefaultCategory: function(type) {
+        const available = getCategoriesForType(type);
+        if (available.length > 0) {
+          setSelectedCategory(available[0]);
+        } else {
+          setSelectedCategory(null);
+        }
+      }
+    };
+  }
+
+  const modalCategoryWrapper = document.getElementById('modal-category-wrapper');
+  const pos1CatSearch = initCategorySearch(modalCategoryWrapper);
+
+  function setSelectedCategoryById(id) {
+    if (pos1CatSearch) {
+      pos1CatSearch.setSelectedCategoryById(id);
+    }
+  }
+
+  function setDefaultCategoryForType(type) {
+    if (pos1CatSearch) {
+      pos1CatSearch.setDefaultCategory(type);
+    }
+  }
+
+  function closeDropdown() {
+    document.querySelectorAll('.cat-dropdown-menu').forEach(d => {
+      d.style.display = 'none';
+      d.innerHTML = '';
+    });
   }
 
   const toAccountGroup = document.getElementById('form-group-to-account');
@@ -417,46 +761,6 @@ document.addEventListener('DOMContentLoaded', function() {
   function getSpelledRupiah(angka) {
     if (!angka || angka === 0) return "Nol Rupiah";
     return (terbilangNumber(angka).trim() + " Rupiah").replace(/\s+/g, ' ');
-  }
-
-  function buildCategorySelectOptions(type, selectedId = null) {
-    if (type === 'transfer') {
-      const specificCat = modalCategories.find(c => c.code === '1-1100') || modalCategories.find(c => c.id == transferCatId);
-      const label = specificCat ? (specificCat.code ? `[${specificCat.code}] ${specificCat.name}` : specificCat.name) : '[1-1100] Kas dan Setara Kas';
-      return `<option value="${specificCat ? specificCat.id : '60'}" selected>${escapeHtml(label)}</option>`;
-    }
-
-    const typeOrder = (type === 'income')
-      ? ['income', 'asset', 'liability', 'equity', 'expense']
-      : ['expense', 'asset', 'liability', 'equity', 'income'];
-
-    const typeLabels = {
-      expense: 'Beban & Pengeluaran',
-      income: 'Pendapatan & Penerimaan',
-      asset: 'Aset / Piutang / Panjar',
-      liability: 'Kewajiban / Hutang',
-      equity: 'Ekuitas / Modal'
-    };
-
-    let html = '<option value="">-- Pilih Akun / Kategori (COA) --</option>';
-
-    typeOrder.forEach(t => {
-      const groupCats = modalCategories.filter(c => c.type === t)
-        .sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-
-      if (groupCats.length > 0) {
-        const groupTitle = typeLabels[t] || t.toUpperCase();
-        html += `<optgroup label="── ${groupTitle} ──">`;
-        groupCats.forEach(c => {
-          const isSelected = selectedId && (c.id == selectedId);
-          const cLabel = c.code ? `[${c.code}] ${c.name}` : c.name;
-          html += `<option value="${c.id}" ${isSelected ? 'selected' : ''}>${escapeHtml(cLabel)}</option>`;
-        });
-        html += `</optgroup>`;
-      }
-    });
-
-    return html;
   }
 
   function updateMultiItemState() {
@@ -530,9 +834,20 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="form-row">
         <div class="form-group" style="margin-bottom: 10px;">
           <label class="form-label">Akun / Kategori</label>
-          <select class="form-select extra-category-select" ${isTransfer ? 'style="display:none;"' : 'required'}>
-            ${buildCategorySelectOptions(type, isTransfer ? transferCatId : catId)}
-          </select>
+          <div class="cat-search-wrapper extra-category-wrapper" style="${isTransfer ? 'display:none;' : ''}">
+            <div class="cat-search-input-box">
+              <span class="cat-selected-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><circle cx="7" cy="7" r=".5" fill="currentColor"/></svg>
+              </span>
+              <input type="text" class="form-input cat-search-input extra-category-search" 
+                placeholder="Ketik kode atau nama akun..." autocomplete="off" ${isTransfer ? '' : 'required'} />
+              <button type="button" class="cat-search-clear" title="Hapus pilihan" aria-label="Hapus pilihan" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+            <input type="hidden" class="cat-category-id extra-category-id" value="${isTransfer ? transferCatId : (catId || '')}" />
+            <div class="cat-dropdown-menu"></div>
+          </div>
           <div class="extra-transfer-badge" style="${isTransfer ? 'display:flex;' : 'display:none;'} align-items: center; gap: 6px; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; color: var(--color-primary, #3b82f6); font-size: 0.82rem; font-weight: 700;">
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
             [1-1100] Kas dan Setara Kas
@@ -550,6 +865,18 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
 
     extraItemsContainer.appendChild(card);
+
+    const extraWrapper = card.querySelector('.extra-category-wrapper');
+    const catSearch = initCategorySearch(extraWrapper);
+    card._catSearch = catSearch;
+
+    if (isTransfer) {
+      catSearch.setSelectedCategoryById(transferCatId);
+    } else if (catId) {
+      catSearch.setSelectedCategoryById(catId);
+    } else {
+      catSearch.setDefaultCategory(type);
+    }
 
     const removeBtn = card.querySelector('.btn-remove-extra-item');
     if (removeBtn) {
@@ -570,8 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const amtEl = card.querySelector('.extra-amount-input');
       if (amtEl) amtEl.focus();
     } else {
-      const catSelect = card.querySelector('.extra-category-select');
-      if (catSelect) catSelect.focus();
+      if (catSearch && catSearch.searchInput) catSearch.searchInput.focus();
     }
   }
 
@@ -614,10 +940,13 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
       } else {
-        if (!categorySelect.value) {
+        if (!pos1CatSearch || !pos1CatSearch.hiddenInput.value) {
           e.preventDefault();
           alert('Silakan pilih salah satu Akun/Kategori (COA) untuk Pos 1 dari daftar pilihan.');
-          if (categorySelect) categorySelect.focus();
+          if (pos1CatSearch && pos1CatSearch.searchInput) {
+            pos1CatSearch.searchInput.focus();
+            pos1CatSearch.openDropdown();
+          }
           return;
         }
       }
@@ -634,14 +963,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         for (let i = 0; i < extraCards.length; i++) {
           const card = extraCards[i];
-          const catSelect = card.querySelector('.extra-category-select');
+          const catSearch = card._catSearch;
           const amtInput = card.querySelector('.extra-amount-input');
           const posNum = i + 2;
 
-          if (type !== 'transfer' && (!catSelect || !catSelect.value)) {
+          if (type !== 'transfer' && (!catSearch || !catSearch.hiddenInput.value)) {
             e.preventDefault();
             alert(`Silakan pilih Akun/Kategori untuk Pos ${posNum}.`);
-            if (catSelect) catSelect.focus();
+            if (catSearch && catSearch.searchInput) {
+              catSearch.searchInput.focus();
+              catSearch.openDropdown();
+            }
             return;
           }
 
@@ -666,7 +998,7 @@ document.addEventListener('DOMContentLoaded', function() {
           txForm.appendChild(inp);
         }
 
-        const cat1 = (type === 'transfer') ? transferCatId : categorySelect.value;
+        const cat1 = (type === 'transfer') ? transferCatId : pos1CatSearch.hiddenInput.value;
         const desc1 = document.getElementById('modal-desc') ? document.getElementById('modal-desc').value : '';
         appendHidden('items[0][category_id]', cat1);
         appendHidden('items[0][amount]', pos1Amount);
@@ -674,7 +1006,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         extraCards.forEach((card, idx) => {
           const itemIdx = idx + 1;
-          const cVal = (type === 'transfer') ? transferCatId : (card.querySelector('.extra-category-select') ? card.querySelector('.extra-category-select').value : transferCatId);
+          const cVal = (type === 'transfer') 
+            ? transferCatId 
+            : (card._catSearch ? card._catSearch.hiddenInput.value : card.querySelector('.extra-category-id').value);
           const aVal = card.querySelector('.extra-amount-input').value;
           const dVal = card.querySelector('.extra-desc-input') ? card.querySelector('.extra-desc-input').value : '';
           appendHidden(`items[${itemIdx}][category_id]`, cVal);
@@ -696,10 +1030,11 @@ document.addEventListener('DOMContentLoaded', function() {
       if (toAccountGroup) toAccountGroup.style.display = 'block';
       if (toAccountSelect) toAccountSelect.disabled = false;
       if (accountLabel) accountLabel.textContent = 'Dari Rekening (Asal Dana)';
-      if (categorySelect) {
-        categorySelect.style.display = 'none';
-        categorySelect.removeAttribute('required');
-        categorySelect.value = transferCatId;
+      
+      if (modalCategoryWrapper) modalCategoryWrapper.style.display = 'none';
+      if (pos1CatSearch) {
+        pos1CatSearch.searchInput.removeAttribute('required');
+        pos1CatSearch.hiddenInput.value = transferCatId;
       }
       if (transferBadge) transferBadge.style.display = 'block';
       if (saveBtn) saveBtn.textContent = 'Proses Transfer Dana';
@@ -709,13 +1044,13 @@ document.addEventListener('DOMContentLoaded', function() {
       // Update options in any open extra items for transfer mode
       if (extraItemsContainer) {
         extraItemsContainer.querySelectorAll('.extra-item-card').forEach(card => {
-          const select = card.querySelector('.extra-category-select');
+          const wrapper = card.querySelector('.extra-category-wrapper');
           const badge = card.querySelector('.extra-transfer-badge');
-          if (select) {
-            select.style.display = 'none';
-            select.removeAttribute('required');
-            select.value = transferCatId;
-          }
+          const searchInput = card.querySelector('.extra-category-search');
+          const hiddenInput = card.querySelector('.extra-category-id');
+          if (wrapper) wrapper.style.display = 'none';
+          if (searchInput) searchInput.removeAttribute('required');
+          if (hiddenInput) hiddenInput.value = transferCatId;
           if (badge) badge.style.display = 'flex';
         });
       }
@@ -733,12 +1068,17 @@ document.addEventListener('DOMContentLoaded', function() {
       if (toAccountGroup) toAccountGroup.style.display = 'none';
       if (toAccountSelect) toAccountSelect.disabled = true;
       if (accountLabel) accountLabel.textContent = 'Sumber Dana';
-      if (categorySelect) {
-        categorySelect.style.display = 'block';
-        categorySelect.setAttribute('required', 'required');
-        categorySelect.innerHTML = buildCategorySelectOptions(type);
-      }
+      
+      if (modalCategoryWrapper) modalCategoryWrapper.style.display = 'block';
       if (transferBadge) transferBadge.style.display = 'none';
+      if (pos1CatSearch) {
+        pos1CatSearch.searchInput.setAttribute('required', 'required');
+        const currentId = pos1CatSearch.hiddenInput.value;
+        const currentCat = modalCategories.find(c => c.id == currentId);
+        if (!currentCat || currentCat.type !== type) {
+          pos1CatSearch.setDefaultCategory(type);
+        }
+      }
       if (saveBtn) saveBtn.textContent = 'Tambah Transaksi';
       if (modalVoucher) modalVoucher.placeholder = 'Contoh: KT. 01 26.001 (Opsional)';
       if (window.setMultiItemHeaderVisible) window.setMultiItemHeaderVisible(true);
@@ -746,24 +1086,28 @@ document.addEventListener('DOMContentLoaded', function() {
       // Update options in any open extra items for income/expense
       if (extraItemsContainer) {
         extraItemsContainer.querySelectorAll('.extra-item-card').forEach(card => {
-          const select = card.querySelector('.extra-category-select');
+          const wrapper = card.querySelector('.extra-category-wrapper');
           const badge = card.querySelector('.extra-transfer-badge');
-          if (select) {
-            select.style.display = 'block';
-            select.setAttribute('required', 'required');
-            const currentVal = select.value;
-            select.innerHTML = buildCategorySelectOptions(type, currentVal);
-          }
+          const searchInput = card.querySelector('.extra-category-search');
+          if (wrapper) wrapper.style.display = 'block';
+          if (searchInput) searchInput.setAttribute('required', 'required');
           if (badge) badge.style.display = 'none';
+          if (card._catSearch) {
+            const currentId = card._catSearch.hiddenInput.value;
+            const currentCat = modalCategories.find(c => c.id == currentId);
+            if (!currentCat || currentCat.type !== type) {
+              card._catSearch.setDefaultCategory(type);
+            }
+          }
         });
       }
       updateMultiItemState();
     }
   };
 
-  // Initial options setup
-  if (categorySelect) {
-    categorySelect.innerHTML = buildCategorySelectOptions(getCurrentType());
+  // Initial category setup for Pos 1
+  if (pos1CatSearch) {
+    pos1CatSearch.setDefaultCategory(getCurrentType());
   }
 
   // Handle click on voucher prefix chips
