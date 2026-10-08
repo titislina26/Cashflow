@@ -115,17 +115,17 @@
               <label class="form-label" id="modal-category-label">Akun / Kategori</label>
               <div class="cat-search-wrapper" id="modal-category-wrapper">
                 <div class="cat-search-input-box">
-                  <span id="modal-category-selected-icon">
+                  <span class="cat-selected-icon">
                     <x-lucide-tag style="width:16px; height:16px; color:var(--text-muted);" />
                   </span>
-                  <input type="text" class="form-input" id="modal-category-search" 
+                  <input type="text" class="form-input cat-search-input" 
                     placeholder="Ketik kode atau nama akun..." autocomplete="off" required />
-                  <button type="button" id="modal-category-clear" title="Hapus pilihan" aria-label="Hapus pilihan">
+                  <button type="button" class="cat-search-clear" title="Hapus pilihan" aria-label="Hapus pilihan">
                     <x-lucide-x style="width:14px; height:14px;" />
                   </button>
                 </div>
-                <input type="hidden" name="category_id" id="modal-category" />
-                <div id="modal-category-dropdown" class="cat-dropdown-menu"></div>
+                <input type="hidden" name="category_id" class="cat-category-id" id="modal-category" />
+                <div class="cat-dropdown-menu"></div>
               </div>
               <div id="modal-transfer-badge" style="display: none; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; color: var(--color-primary, #3b82f6); line-height: 1.35;">
                 <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem;">
@@ -413,49 +413,13 @@ document.addEventListener('DOMContentLoaded', function() {
     @endforeach
   ];
 
-  const searchInput = document.getElementById('modal-category-search');
+
   const hiddenInput = document.getElementById('modal-category');
-  const iconSpan = document.getElementById('modal-category-selected-icon');
-  const clearBtn = document.getElementById('modal-category-clear');
-  const dropdown = document.getElementById('modal-category-dropdown');
   const typeInput = document.getElementById('modal-type');
   const txForm = document.getElementById('tx-modal-form');
-  let activeIndex = -1;
-  let currentFiltered = [];
 
   function getCurrentType() {
     return typeInput ? typeInput.value : 'expense';
-  }
-
-  function getCategoryLabel(cat) {
-    return cat.code ? `[${cat.code}] ${cat.name}` : cat.name;
-  }
-
-  function setSelectedCategory(cat) {
-    if (!cat) {
-      hiddenInput.value = '';
-      searchInput.value = '';
-      if (iconSpan) {
-        iconSpan.innerHTML = '<i data-lucide="tag" style="width:16px; height:16px; color:var(--text-muted);"></i>';
-        if (window.lucide) lucide.createIcons();
-      }
-      if (clearBtn) clearBtn.style.display = 'none';
-      return;
-    }
-    hiddenInput.value = cat.id;
-    searchInput.value = getCategoryLabel(cat);
-    if (iconSpan) {
-      iconSpan.innerHTML = `<span style="width:12px; height:12px; border-radius:50%; background:${cat.color || '#6366f1'}; display:inline-block;"></span>`;
-    }
-    if (clearBtn) clearBtn.style.display = 'block';
-    closeDropdown();
-  }
-
-  function setSelectedCategoryById(id) {
-    const cat = modalCategories.find(c => c.id == id);
-    if (cat) {
-      setSelectedCategory(cat);
-    }
   }
 
   function getCategoriesForType(type, query = '') {
@@ -477,15 +441,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  function setDefaultCategoryForType(type) {
-    const available = getCategoriesForType(type);
-    if (available.length > 0) {
-      setSelectedCategory(available[0]);
-    } else {
-      setSelectedCategory(null);
-    }
-  }
-
   function escapeHtml(str) {
     return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -502,151 +457,205 @@ document.addEventListener('DOMContentLoaded', function() {
     return `${before}<mark style="background: rgba(245, 158, 11, 0.35); color: inherit; padding: 0 1px; border-radius: 2px;">${match}</mark>${after}`;
   }
 
-  function renderDropdown(items, query) {
-    currentFiltered = items;
-    activeIndex = -1;
+  function initCategoryDropdown(wrapper) {
+    if (!wrapper) return null;
+    const searchInput = wrapper.querySelector('.cat-search-input');
+    const inputHidden = wrapper.querySelector('.cat-category-id');
+    const iconSpan = wrapper.querySelector('.cat-selected-icon');
+    const clearBtn = wrapper.querySelector('.cat-search-clear');
+    const dropdown = wrapper.querySelector('.cat-dropdown-menu');
+    
+    let activeIndex = -1;
+    let currentFiltered = [];
 
-    if (!items.length) {
-      dropdown.innerHTML = `
-        <div class="cat-dropdown-empty">
-          <i data-lucide="search-x" style="width:24px; height:24px; margin: 0 auto 6px; display:block; color:var(--text-muted);"></i>
-          Tidak ada akun yang cocok dengan "<strong>${escapeHtml(query)}</strong>"
-        </div>
-      `;
-      dropdown.style.display = 'block';
-      if (window.lucide) lucide.createIcons();
-      return;
-    }
-
-    let html = `
-      <div class="cat-dropdown-header">
-        <span>Daftar Akun (${items.length})</span>
-        <span>Gunakan ↑↓ Enter</span>
-      </div>
-    `;
-
-    items.forEach((cat, idx) => {
-      const isSelected = (hiddenInput.value == cat.id);
-      const codeBadge = cat.code 
-        ? `<span class="cat-dropdown-item-code">${highlightMatch(cat.code, query)}</span>`
-        : '';
-      html += `
-        <div class="cat-dropdown-item ${isSelected ? 'active-item' : ''}" data-index="${idx}" data-id="${cat.id}">
-          <span style="width: 10px; height: 10px; border-radius: 50%; background: ${cat.color || '#6366f1'}; display: inline-block; flex-shrink: 0;"></span>
-          ${codeBadge}
-          <span class="cat-dropdown-item-name">${highlightMatch(cat.name, query)}</span>
-        </div>
-      `;
-    });
-
-    dropdown.innerHTML = html;
-    dropdown.style.display = 'block';
-
-    dropdown.querySelectorAll('.cat-dropdown-item').forEach(el => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const id = el.dataset.id;
-        setSelectedCategoryById(id);
-      });
-    });
-  }
-
-  function filterAndRender(query) {
-    const type = getCurrentType();
-    const matched = getCategoriesForType(type, query);
-    renderDropdown(matched, query);
-  }
-
-  function openDropdown() {
-    filterAndRender(searchInput.value);
-  }
-
-  function closeDropdown() {
-    dropdown.style.display = 'none';
-    dropdown.innerHTML = '';
-    activeIndex = -1;
-  }
-
-  // Keyboard navigation
-  searchInput.addEventListener('keydown', (e) => {
-    if (dropdown.style.display === 'block') {
-      const items = dropdown.querySelectorAll('.cat-dropdown-item');
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (items.length > 0) {
-          activeIndex = (activeIndex + 1) % items.length;
-          updateActiveItem(items);
-        }
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (items.length > 0) {
-          activeIndex = (activeIndex - 1 + items.length) % items.length;
-          updateActiveItem(items);
-        }
-      } else if (e.key === 'Enter') {
-        if (activeIndex >= 0 && items[activeIndex]) {
-          e.preventDefault();
-          items[activeIndex].click();
-        } else if (currentFiltered.length > 0) {
-          e.preventDefault();
-          setSelectedCategory(currentFiltered[0]);
-        }
-      } else if (e.key === 'Escape') {
-        closeDropdown();
-      }
-    } else {
-      if (e.key === 'ArrowDown' || e.key === 'Enter') {
-        openDropdown();
-      }
-    }
-  });
-
-  function updateActiveItem(items) {
-    items.forEach((item, idx) => {
-      if (idx === activeIndex) {
-        item.classList.add('active-item');
-        item.scrollIntoView({ block: 'nearest' });
-      } else {
-        item.classList.remove('active-item');
-      }
-    });
-  }
-
-  searchInput.addEventListener('input', () => {
-    hiddenInput.value = '';
-    clearBtn.style.display = searchInput.value ? 'block' : 'none';
-    filterAndRender(searchInput.value);
-  });
-
-  searchInput.addEventListener('focus', () => {
-    searchInput.select();
-    openDropdown();
-  });
-
-  clearBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    searchInput.value = '';
-    hiddenInput.value = '';
-    clearBtn.style.display = 'none';
-    searchInput.focus();
-    filterAndRender('');
-  });
-
-  document.addEventListener('click', (e) => {
-    const wrapper = document.getElementById('modal-category-wrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-      closeDropdown();
-      if (hiddenInput.value) {
-        const cat = modalCategories.find(c => c.id == hiddenInput.value);
-        if (cat) {
-          searchInput.value = getCategoryLabel(cat);
+    const inst = {
+      wrapper,
+      searchInput,
+      hiddenInput: inputHidden,
+      setSelectedCategory(cat) {
+        if (!cat) {
+          inputHidden.value = '';
+          searchInput.value = '';
           if (iconSpan) {
-            iconSpan.innerHTML = `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${cat.color};"></span>`;
+            iconSpan.innerHTML = '<i data-lucide="tag" style="width:16px; height:16px; color:var(--text-muted);"></i>';
+            if (window.lucide) lucide.createIcons();
+          }
+          if (clearBtn) clearBtn.style.display = 'none';
+          return;
+        }
+        inputHidden.value = cat.id;
+        searchInput.value = cat.code ? `[${cat.code}] ${cat.name}` : cat.name;
+        if (iconSpan) {
+          iconSpan.innerHTML = `<span style="width:12px; height:12px; border-radius:50%; background:${cat.color || '#6366f1'}; display:inline-block;"></span>`;
+        }
+        if (clearBtn) clearBtn.style.display = 'block';
+        inst.closeDropdown();
+      },
+      setSelectedCategoryById(id) {
+        const cat = modalCategories.find(c => c.id == id);
+        if (cat) inst.setSelectedCategory(cat);
+      },
+      closeDropdown() {
+        dropdown.style.display = 'none';
+        dropdown.innerHTML = '';
+        activeIndex = -1;
+      },
+      openDropdown() {
+        inst.pos1DropdownInst.filterAndRender(pos1DropdownInst.searchInput.value);
+      },
+      filterAndRender(query) {
+        const type = getCurrentType();
+        const matched = getCategoriesForType(type, query);
+        inst.renderDropdown(matched, query);
+      },
+      renderDropdown(items, query) {
+        currentFiltered = items;
+        activeIndex = -1;
+        if (!items.length) {
+          dropdown.innerHTML = `
+            <div class="cat-dropdown-empty">
+              <i data-lucide="search-x" style="width:24px; height:24px; margin: 0 auto 6px; display:block; color:var(--text-muted);"></i>
+              Tidak ada akun yang cocok dengan "<strong>${escapeHtml(query)}</strong>"
+            </div>
+          `;
+          dropdown.style.display = 'block';
+          if (window.lucide) lucide.createIcons();
+          return;
+        }
+        let html = `
+          <div class="cat-dropdown-header">
+            <span>Daftar Akun (${items.length})</span>
+            <span>Gunakan ↑↓ Enter</span>
+          </div>
+        `;
+        items.forEach((cat, idx) => {
+          const isSelected = (inputHidden.value == cat.id);
+          const codeBadge = cat.code 
+            ? `<span class="cat-dropdown-item-code">${highlightMatch(cat.code, query)}</span>`
+            : '';
+          html += `
+            <div class="cat-dropdown-item ${isSelected ? 'active-item' : ''}" data-index="${idx}" data-id="${cat.id}">
+              <span style="width: 10px; height: 10px; border-radius: 50%; background: ${cat.color || '#6366f1'}; display: inline-block; flex-shrink: 0;"></span>
+              ${codeBadge}
+              <span class="cat-dropdown-item-name">${highlightMatch(cat.name, query)}</span>
+            </div>
+          `;
+        });
+        dropdown.innerHTML = html;
+        dropdown.style.display = 'block';
+        dropdown.querySelectorAll('.cat-dropdown-item').forEach(el => {
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            inst.setSelectedCategoryById(el.dataset.id);
+          });
+        });
+      },
+      updateActiveItem(items) {
+        items.forEach((item, idx) => {
+          if (idx === activeIndex) {
+            item.classList.add('active-item');
+            item.scrollIntoView({ block: 'nearest' });
+          } else {
+            item.classList.remove('active-item');
+          }
+        });
+      }
+    };
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (pos1DropdownInst && pos1DropdownInst.dropdown.style.display === 'block') {
+        const items = dropdown.querySelectorAll('.cat-dropdown-item');
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (items.length > 0) {
+            activeIndex = (activeIndex + 1) % items.length;
+            inst.updateActiveItem(items);
+          }
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (items.length > 0) {
+            activeIndex = (activeIndex - 1 + items.length) % items.length;
+            inst.updateActiveItem(items);
+          }
+        } else if (e.key === 'Enter') {
+          if (activeIndex >= 0 && items[activeIndex]) {
+            e.preventDefault();
+            items[activeIndex].click();
+          } else if (currentFiltered.length > 0) {
+            e.preventDefault();
+            inst.setSelectedCategory(currentFiltered[0]);
+          }
+        } else if (e.key === 'Escape') {
+          inst.closeDropdown();
+        }
+      } else {
+        if (e.key === 'ArrowDown' || e.key === 'Enter') {
+          inst.if(pos1DropdownInst) pos1DropdownInst.openDropdown();
+        }
+      }
+    });
+
+    searchInput.addEventListener('input', () => {
+      inputHidden.value = '';
+      if (clearBtn) clearBtn.style.display = searchInput.value ? 'block' : 'none';
+      inst.pos1DropdownInst.filterAndRender(pos1DropdownInst.searchInput.value);
+    });
+
+    searchInput.addEventListener('focus', () => {
+      searchInput.select();
+      inst.if(pos1DropdownInst) pos1DropdownInst.openDropdown();
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        searchInput.value = '';
+        inputHidden.value = '';
+        clearBtn.style.display = 'none';
+        if(pos1DropdownInst) pos1DropdownInst.searchInput.focus();
+        inst.filterAndRender('');
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!wrapper.contains(e.target)) {
+        inst.closeDropdown();
+        if (inputHidden.value) {
+          const cat = modalCategories.find(c => c.id == inputHidden.value);
+          if (cat) {
+            searchInput.value = cat.code ? `[${cat.code}] ${cat.name}` : cat.name;
+            if (iconSpan) {
+              iconSpan.innerHTML = `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${cat.color};"></span>`;
+            }
           }
         }
       }
+    });
+
+    return inst;
+  }
+
+  const categoryWrapperPos1 = document.getElementById('modal-category-wrapper');
+  const pos1DropdownInst = initCategoryDropdown(categoryWrapperPos1);
+  let extraDropdownInsts = [];
+
+  function setSelectedCategoryById(id) {
+    if (pos1DropdownInst) pos1DropdownInst.setSelectedCategoryById(id);
+  }
+
+  function setDefaultCategoryForType(type) {
+    const available = getCategoriesForType(type);
+    if (available.length > 0) {
+      if (pos1DropdownInst) pos1DropdownInst.setSelectedCategory(available[0]);
+    } else {
+      if (pos1DropdownInst) pos1DropdownInst.setSelectedCategory(null);
     }
-  });
+  }
+
+  function closeDropdown() {
+    if (pos1DropdownInst) pos1DropdownInst.closeDropdown();
+    extraDropdownInsts.forEach(inst => inst.closeDropdown());
+  }
 
   const toAccountGroup = document.getElementById('form-group-to-account');
   const accountLabel = document.getElementById('modal-account-label');
@@ -793,9 +802,20 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="form-row">
         <div class="form-group" style="margin-bottom: 10px;">
           <label class="form-label">Akun / Kategori</label>
-          <select class="form-select extra-category-select" required>
-            ${buildCategorySelectOptions(type, catId)}
-          </select>
+          <div class="cat-search-wrapper extra-cat-wrapper" style="width: 100%;">
+            <div class="cat-search-input-box">
+              <span class="cat-selected-icon">
+                <i data-lucide="tag" style="width:16px; height:16px; color:var(--text-muted);"></i>
+              </span>
+              <input type="text" class="form-input cat-search-input" 
+                placeholder="Ketik kode atau nama akun..." autocomplete="off" required />
+              <button type="button" class="cat-search-clear" title="Hapus pilihan" aria-label="Hapus pilihan" style="display:none; position:absolute; right:10px; top:50%; transform:translateY(-50%); background:transparent; border:none; font-size:0.85rem; color:var(--text-muted); cursor:pointer; padding:4px; border-radius:50%; z-index:2;">
+                <i data-lucide="x" style="width:14px; height:14px;"></i>
+              </button>
+            </div>
+            <input type="hidden" class="cat-category-id extra-category-select" required />
+            <div class="cat-dropdown-menu"></div>
+          </div>
         </div>
         <div class="form-group" style="margin-bottom: 10px;">
           <label class="form-label">Jumlah (Rp)</label>
@@ -823,13 +843,26 @@ document.addEventListener('DOMContentLoaded', function() {
       amtInput.addEventListener('input', updateMultiItemState);
     }
 
+    const wrapper = card.querySelector('.extra-cat-wrapper');
+    const inst = initCategoryDropdown(wrapper);
+    if (inst) {
+      extraDropdownInsts.push(inst);
+      if (catId) {
+        inst.setSelectedCategoryById(catId);
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
     updateMultiItemState();
 
-    const catSelect = card.querySelector('.extra-category-select');
+    const catSelect = card.querySelector('.cat-search-input');
+
     if (catSelect) catSelect.focus();
   }
 
+
   function resetExtraRows() {
+    extraDropdownInsts = [];
     if (extraItemsContainer) {
       extraItemsContainer.innerHTML = '';
     }
@@ -871,8 +904,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!hiddenInput.value) {
           e.preventDefault();
           alert('Silakan pilih salah satu Akun/Kategori (COA) untuk Pos 1 dari daftar pilihan.');
-          searchInput.focus();
-          openDropdown();
+          if(pos1DropdownInst) pos1DropdownInst.searchInput.focus();
+          if(pos1DropdownInst) pos1DropdownInst.openDropdown();
           return;
         }
 
@@ -952,9 +985,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (accountLabel) accountLabel.textContent = 'Dari Rekening (Asal Dana)';
       if (categoryWrapper) categoryWrapper.style.display = 'none';
       if (transferBadge) transferBadge.style.display = 'block';
-      if (searchInput) searchInput.removeAttribute('required');
+      if (searchInput) if(pos1DropdownInst) pos1DropdownInst.searchInput.removeAttribute('required');
       if (hiddenInput) {
-        hiddenInput.value = '60'; // id for [1-1100] Kas dan Setara Kas
+        setSelectedCategoryById('60'); // id for [1-1100] Kas dan Setara Kas
       }
       if (saveBtn) saveBtn.textContent = 'Proses Transfer Dana';
       if (modalVoucher) modalVoucher.placeholder = 'Contoh: No. Cek Mandiri / Bukti Transfer';
@@ -975,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (accountLabel) accountLabel.textContent = 'Sumber Dana';
       if (categoryWrapper) categoryWrapper.style.display = 'block';
       if (transferBadge) transferBadge.style.display = 'none';
-      if (searchInput) searchInput.setAttribute('required', 'required');
+      if (searchInput) if(pos1DropdownInst) pos1DropdownInst.searchInput.setAttribute('required', 'required');
       if (saveBtn) saveBtn.textContent = 'Tambah Transaksi';
       if (modalVoucher) modalVoucher.placeholder = 'Contoh: KT. 01 26.001 (Opsional)';
       if (window.setMultiItemHeaderVisible) window.setMultiItemHeaderVisible(true);
@@ -985,8 +1018,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!currentCat || currentCat.type !== type) {
         setDefaultCategoryForType(type);
       }
-      if (dropdown.style.display === 'block') {
-        filterAndRender(searchInput.value);
+      if (pos1DropdownInst && pos1DropdownInst.dropdown.style.display === 'block') {
+        pos1DropdownInst.filterAndRender(pos1DropdownInst.searchInput.value);
       }
 
       // Update options in any open extra items
