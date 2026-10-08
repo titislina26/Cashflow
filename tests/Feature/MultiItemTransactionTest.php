@@ -170,4 +170,86 @@ class MultiItemTransactionTest extends TestCase
         // Benar-benar hilang permanen dari database
         $this->assertNull(Transaction::withTrashed()->find($tx->id));
     }
+
+    public function test_can_store_applicant_name_and_flow_to_voucher_recipient()
+    {
+        $cat = Category::create([
+            'code' => '6-7000',
+            'name' => 'Biaya Konsumsi Rapat',
+            'type' => 'expense',
+            'icon' => 'tag',
+            'color' => '#6366f1',
+        ]);
+
+        $response = $this->post(route('transactions.store'), [
+            'account' => 'petty_cash',
+            'type' => 'expense',
+            'category_id' => $cat->id,
+            'amount' => 75000,
+            'date' => '2026-01-20',
+            'voucher_number' => 'KT.01.26.010',
+            'description' => 'Snack Rapat Koordinasi',
+            'paraf' => 'Ahmad Fauzi',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('transactions', [
+            'voucher_number' => 'KT.01.26.010',
+            'paraf' => 'Ahmad Fauzi',
+        ]);
+
+        $tx = Transaction::where('voucher_number', 'KT.01.26.010')->first();
+
+        // Check voucher print preview inherits applicant name as recipient
+        $voucherResp = $this->get(route('transactions.index', [
+            'print_voucher' => 1,
+            'transaction_id' => $tx->id,
+        ]));
+
+        $voucherResp->assertOk();
+        $voucherResp->assertSee('Ahmad Fauzi');
+    }
+
+    public function test_can_store_multi_item_applicant_name()
+    {
+        $cat1 = Category::create([
+            'code' => '6-8000',
+            'name' => 'Biaya ATK',
+            'type' => 'expense',
+            'icon' => 'tag',
+            'color' => '#6366f1',
+        ]);
+
+        $cat2 = Category::create([
+            'code' => '6-8001',
+            'name' => 'Biaya Materai',
+            'type' => 'expense',
+            'icon' => 'tag',
+            'color' => '#6366f1',
+        ]);
+
+        $response = $this->post(route('transactions.store'), [
+            'account' => 'petty_cash',
+            'type' => 'expense',
+            'date' => '2026-01-21',
+            'voucher_number' => 'KT.01.26.011',
+            'paraf' => 'Dewi Lestari',
+            'items' => [
+                [
+                    'category_id' => $cat1->id,
+                    'amount' => 50000,
+                    'description' => 'Kertas A4',
+                ],
+                [
+                    'category_id' => $cat2->id,
+                    'amount' => 20000,
+                    'description' => 'Materai 10000',
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect();
+        $this->assertEquals(2, Transaction::where('voucher_number', 'KT.01.26.011')->where('paraf', 'Dewi Lestari')->count());
+    }
 }
+

@@ -40,39 +40,41 @@ class TransactionController extends Controller
                 }
             }
             
-            if (empty($items) && $request->filled('transaction_id')) {
+            $tx = null;
+            if ($request->filled('transaction_id')) {
                 $tx = Transaction::with(['category', 'job'])->find($request->transaction_id);
-                if ($tx) {
-                    if (!empty($tx->voucher_number)) {
-                        $sameVoucherTxs = Transaction::with(['category', 'job'])
-                            ->where('voucher_number', $tx->voucher_number)
-                            ->where('account', $tx->account)
-                            ->orderBy('id', 'asc')
-                            ->get();
-                    } else {
-                        $sameVoucherTxs = collect([$tx]);
-                    }
+            }
 
-                    $totalAmount = 0;
-                    foreach ($sameVoucherTxs as $index => $itemTx) {
-                        $cleanNp = $itemTx->category ? str_replace(['-', ' '], '', $itemTx->category->code) : '';
-                        $items[] = [
-                            'no' => $index + 1,
-                            'np' => $cleanNp,
-                            'desc' => $itemTx->description,
-                            'amount' => (float)$itemTx->amount,
-                            'ket' => $itemTx->ket ?? ''
-                        ];
-                        $totalAmount += (float)$itemTx->amount;
-                    }
-                    if (empty($prodi)) {
-                        $prodi = $tx->job ? $tx->job->name : 'Pusat';
-                    }
+            if (empty($items) && $tx) {
+                if (!empty($tx->voucher_number)) {
+                    $sameVoucherTxs = Transaction::with(['category', 'job'])
+                        ->where('voucher_number', $tx->voucher_number)
+                        ->where('account', $tx->account)
+                        ->orderBy('id', 'asc')
+                        ->get();
+                } else {
+                    $sameVoucherTxs = collect([$tx]);
+                }
+
+                $totalAmount = 0;
+                foreach ($sameVoucherTxs as $index => $itemTx) {
+                    $cleanNp = $itemTx->category ? str_replace(['-', ' '], '', $itemTx->category->code) : '';
+                    $items[] = [
+                        'no' => $index + 1,
+                        'np' => $cleanNp,
+                        'desc' => $itemTx->description,
+                        'amount' => (float)$itemTx->amount,
+                        'ket' => $itemTx->ket ?? ''
+                    ];
+                    $totalAmount += (float)$itemTx->amount;
+                }
+                if (empty($prodi)) {
+                    $prodi = $tx->job ? $tx->job->name : 'Pusat';
                 }
             }
             
             if (empty($prodi)) {
-                $prodi = 'Pusat';
+                $prodi = ($tx && $tx->job) ? $tx->job->name : 'Pusat';
             }
             
             $rawTerbilang = \App\Helpers\TerbilangHelper::spelling($totalAmount);
@@ -82,13 +84,11 @@ class TransactionController extends Controller
             $approver = $request->get('approver', 'Ir. Rina Agustin Indriani, MURP');
             $verifier = $request->get('verifier', "Noor'aini Kartikarini, S.M");
             $payer = $request->get('payer', 'Irma Yaniarti');
-            $recipient = $request->get('recipient', 'Titis Marsela');
+            $defaultRecipient = (!empty($tx) && !empty($tx->paraf)) ? $tx->paraf : 'Titis Marsela';
+            $recipient = $request->get('recipient', $defaultRecipient);
             
-            if ($request->filled('transaction_id') && !empty($voucherNumber)) {
-                $tx = Transaction::find($request->transaction_id);
-                if ($tx) {
-                    $tx->update(['voucher_number' => $voucherNumber]);
-                }
+            if ($tx && !empty($voucherNumber)) {
+                $tx->update(['voucher_number' => $voucherNumber]);
             }
             
             $transactionType = $request->get('transaction_type', 'expense');
@@ -252,6 +252,7 @@ class TransactionController extends Controller
                 'date' => 'required|date',
                 'voucher_number' => 'nullable|string|max:255',
                 'job_id' => 'nullable|exists:accounting_jobs,id',
+                'paraf' => 'nullable|string|max:255',
                 'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
                 'items' => 'required|array|min:2',
                 'items.*.category_id' => 'required|exists:categories,id',
@@ -284,6 +285,7 @@ class TransactionController extends Controller
                         'voucher_number' => $request->voucher_number ?: null,
                         'date' => $request->date,
                         'description' => $description,
+                        'paraf' => $request->paraf ?: null,
                         'ket' => !empty($item['ket']) ? $item['ket'] : ($request->ket ?: null),
                         'attachment' => $attachmentPath,
                     ]);
@@ -307,6 +309,7 @@ class TransactionController extends Controller
             'date' => 'required|date',
             'voucher_number' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1000',
+            'paraf' => 'nullable|string|max:255',
             'ket' => 'nullable|string|max:255',
             'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
@@ -338,6 +341,7 @@ class TransactionController extends Controller
                     'voucher_number' => $request->voucher_number ?: null,
                     'date' => $request->date,
                     'description' => $request->description ?: "Transfer dana ke {$toName}",
+                    'paraf' => $request->paraf ?: null,
                     'ket' => $request->ket ?: "Transfer Kas/Bank Keluar ke {$toName}",
                     'attachment' => $attachmentPath,
                 ]);
@@ -352,6 +356,7 @@ class TransactionController extends Controller
                     'voucher_number' => $request->voucher_number ?: null,
                     'date' => $request->date,
                     'description' => $request->description ?: "Transfer dana dari {$fromName}",
+                    'paraf' => $request->paraf ?: null,
                     'ket' => $request->ket ?: "Transfer Kas/Bank Masuk dari {$fromName}",
                     'attachment' => $attachmentPath,
                     'related_transaction_id' => $outflow->id,
@@ -374,6 +379,7 @@ class TransactionController extends Controller
             'voucher_number' => $request->voucher_number ?: null,
             'date' => $request->date,
             'description' => $request->description,
+            'paraf' => $request->paraf ?: null,
             'ket' => $request->ket,
             'attachment' => $attachmentPath,
         ]);
@@ -397,6 +403,7 @@ class TransactionController extends Controller
             'date' => 'required|date',
             'voucher_number' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1000',
+            'paraf' => 'nullable|string|max:255',
             'ket' => 'nullable|string|max:255',
             'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
@@ -410,6 +417,7 @@ class TransactionController extends Controller
             'voucher_number' => $request->voucher_number ?: null,
             'date' => $request->date,
             'description' => $request->description,
+            'paraf' => $request->paraf ?: null,
             'ket' => $request->ket,
         ];
 

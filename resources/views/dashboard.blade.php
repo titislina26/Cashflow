@@ -393,6 +393,10 @@
       dateInput.value = "{{ date('Y-m-d') }}";
       const modalJob = document.getElementById('modal-job');
       if (modalJob) modalJob.value = '';
+      const modalParaf = document.getElementById('modal-paraf');
+      if (modalParaf) modalParaf.value = '';
+      const modalKet = document.getElementById('modal-ket');
+      if (modalKet) modalKet.value = '';
       
       setFormType('expense');
       if (window.selectModalCategoryDefault) {

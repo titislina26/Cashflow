@@ -174,6 +174,13 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label">Yang Mengajukan (Opsional)</label>
+          <input type="text" class="form-input" name="paraf" id="modal-paraf" 
+            placeholder="Contoh: Budi Santoso / Titis Marsela..." />
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">Nama ini otomatis masuk ke kolom "Yang Menerima" pada cetak bukti pengeluaran.</div>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">Keterangan Tambahan (Opsional)</label>
           <textarea class="form-textarea" name="ket" id="modal-ket" rows="2"
             placeholder="Catatan tambahan (tampil di kolom Keterangan pada cetak bukti)..."></textarea>

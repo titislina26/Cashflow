@@ -248,7 +248,7 @@
                   <div style="font-size:0.88rem; color:#f1f5f9;">{{ $tx->description ?? '—' }}</div>
                   @if($tx->ket || $tx->paraf)
                     <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
-                      @if($tx->paraf)<span>Paraf: {{ $tx->paraf }}</span>@endif
+                      @if($tx->paraf)<span>Pengaju: {{ $tx->paraf }}</span>@endif
                       @if($tx->paraf && $tx->ket) • @endif
                       @if($tx->ket)<span>Ket: {{ $tx->ket }}</span>@endif
                     </div>
@@ -304,6 +304,7 @@
                         data-description="{{ $tx->description }}"
                         data-date="{{ $tx->date->format('Y-m-d') }}"
                         data-type="{{ $tx->type }}"
+                        data-paraf="{{ $tx->paraf }}"
                         data-ket="{{ $tx->ket }}"
                         data-np="{{ $tx->category ? str_replace(['-', ' '], '', $tx->category->code) : '' }}"
                         data-prodi="{{ $tx->job ? $tx->job->name : 'Pusat' }}"
@@ -325,6 +326,7 @@
                         data-date="{{ $tx->date->format('Y-m-d') }}"
                         data-amount="{{ (float) $tx->amount }}"
                         data-description="{{ $tx->description }}"
+                        data-paraf="{{ $tx->paraf }}"
                         data-ket="{{ $tx->ket }}"
                         data-voucher="{{ $tx->voucher_number }}"
                         style="padding: 4px 6px"
@@ -595,6 +597,8 @@
       dateInput.value = "{{ date('Y-m-d') }}";
       document.getElementById('modal-job').value = '';
       document.getElementById('modal-voucher').value = '';
+      const modalParaf = document.getElementById('modal-paraf');
+      if (modalParaf) modalParaf.value = '';
       
       setFormType('expense');
       if (window.selectModalCategoryDefault) {
@@ -634,6 +638,7 @@
         const desc = btn.dataset.description;
         const voucher = btn.dataset.voucher;
         const ket = btn.dataset.ket;
+        const paraf = btn.dataset.paraf;
 
         form.action = "{{ url('/transactions') }}/" + id;
         methodInput.value = "PUT";
@@ -643,6 +648,8 @@
         amountInput.value = amount;
         descInput.value = desc;
         document.getElementById('modal-ket').value = ket || '';
+        const modalParaf = document.getElementById('modal-paraf');
+        if (modalParaf) modalParaf.value = paraf || '';
         dateInput.value = date;
         document.getElementById('modal-job').value = jobId || '';
         document.getElementById('modal-voucher').value = voucher || '';
@@ -830,6 +837,20 @@
           });
         } else {
           addVoucherRow(txDesc, txNp, txAmount, txKet);
+        }
+
+        let recipientName = btn.dataset.paraf;
+        if ((!recipientName || recipientName.trim() === '') && siblingBtns.length > 1) {
+          for (const sBtn of siblingBtns) {
+            if (sBtn.dataset.paraf && sBtn.dataset.paraf.trim() !== '') {
+              recipientName = sBtn.dataset.paraf;
+              break;
+            }
+          }
+        }
+        const recipientInput = document.getElementById('voucher-recipient');
+        if (recipientInput) {
+          recipientInput.value = (recipientName && recipientName.trim() !== '') ? recipientName : 'Titis Marsela';
         }
 
         voucherOverlay.classList.add('active');
