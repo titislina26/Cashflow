@@ -175,8 +175,69 @@
 
         <div class="form-group">
           <label class="form-label">Yang Mengajukan (Opsional)</label>
-          <input type="text" class="form-input" name="paraf" id="modal-paraf" 
-            placeholder="Contoh: Budi Santoso / Titis Marsela..." />
+          <input type="text" class="form-input" name="paraf" id="modal-paraf" list="paraf-list"
+            placeholder="Contoh: Budi Santoso / Titis Marsela..." autocomplete="off" />
+          <datalist id="paraf-list">
+            <option value="Agung Prasetyo, A.Md"></option>
+            <option value="Ai Sri Asih Suherman"></option>
+            <option value="Andreas Victor Halomoan Simanungkalit S.Kom., M.S.I"></option>
+            <option value="Bambang Triguno S.T., M.T"></option>
+            <option value="Benny Kusdinar S.T., M.M."></option>
+            <option value="Bobby Pratama"></option>
+            <option value="Dedi Iskandar, S.T., M.T.I"></option>
+            <option value="Deni Kelana Nurjaya"></option>
+            <option value="Dian Sovana, S.T., M.T"></option>
+            <option value="Dr. Ir. Arie Setiadi Moerwanto, M.Sc"></option>
+            <option value="Dr. Ir. Ismail Widadi, S.T., M.Sc"></option>
+            <option value="Dr. Ir. Muktar Napitupulu, M.Sc"></option>
+            <option value="Dr. Ir. Slamet Muljono, M.Eng.Sc"></option>
+            <option value="Dr. Ir. Timbul P.M Panjaitan, MA"></option>
+            <option value="Drs. Gunawan Wibisono, M.T."></option>
+            <option value="Eda Loisa Kosapitu S.T., M.T"></option>
+            <option value="Edi Pramono S.T., M.T"></option>
+            <option value="Egi Ruswandi S.Pd"></option>
+            <option value="Eko Nurlita, S.T, M.T"></option>
+            <option value="Elly Noriza M.A.,S.T"></option>
+            <option value="Elmi Besty Pratiwi S.T., M.T.I"></option>
+            <option value="Endah Yunari, ST, MT"></option>
+            <option value="Erwinda Firna Safitri, ST"></option>
+            <option value="Fajar Lazuardi"></option>
+            <option value="Heldy Suherman, ST, Msi"></option>
+            <option value="Iis Trisnawati ST., MT"></option>
+            <option value="Ir. Amien Sajekti, MT"></option>
+            <option value="Ir. Effy Hidayati, MT"></option>
+            <option value="Ir. Rina Agustin Indriyani, MURP"></option>
+            <option value="Irma Yaniarti"></option>
+            <option value="Jamaludin"></option>
+            <option value="Kartika Wati, S.T."></option>
+            <option value="Kristianti Utomo S.T., M.Si"></option>
+            <option value="Kusnadi Efendi, S.M"></option>
+            <option value="M. Alif Syahdila Rivian, S.I.Kom"></option>
+            <option value="Mahdia Raisa Hanifa Arifin, S.T"></option>
+            <option value="Moch. Miftahudin"></option>
+            <option value="Mohamad Farhan Ali"></option>
+            <option value="Muhamad Armin"></option>
+            <option value="Muhammad Ihya Aulia Elfatiha, S.Kom., M.Kom"></option>
+            <option value="Nooraini Kartikarini, S.M"></option>
+            <option value="Nurul Fitriasih, ST"></option>
+            <option value="Partono"></option>
+            <option value="Prayoga Adhinugroho S.T, M.Sc."></option>
+            <option value="Raga Wahyudi"></option>
+            <option value="Ridwan, S.T., M.Kom"></option>
+            <option value="Risan Puntaningrum, S.Pd"></option>
+            <option value="Rizki Nugraha, S.Kom"></option>
+            <option value="Rochman Rosyid, ST, MT"></option>
+            <option value="Romdoni"></option>
+            <option value="Samsul Ma'rif"></option>
+            <option value="Sigit Himawan S.T, M.Sc."></option>
+            <option value="Siti Maryam"></option>
+            <option value="Sugiyatno, S.Kom, M. Kom"></option>
+            <option value="Suma"></option>
+            <option value="Titis Marselina Milsy"></option>
+            <option value="Tony Purba M.Kom,S.T"></option>
+            <option value="Trimo Pamudji Al Djono S.T, M.Si"></option>
+            <option value="Yudistira Samudra SE"></option>
+          </datalist>
           <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">Nama ini otomatis masuk ke kolom "Yang Menerima" pada cetak bukti pengeluaran.</div>
         </div>
 
