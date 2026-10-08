@@ -21,6 +21,13 @@ Saat membuat, mengedit, atau menganalisis transaksi kas di aplikasi ini, patuhi 
 3.  **Kategori & Emoji Bawaan**:
     *   **Pemasukan**: SPP Teknik Informatika (💻), SPP Teknik Sipil (🏗️), SPP Teknik Lingkungan (🌱), Pendaftaran Maba (📝), Hibah & Kerjasama (🤝), Pendapatan Lainnya (💵).
     *   **Pengeluaran**: Gaji Dosen & Staf (👥), Operasional Kampus (⚙️), Sewa & Utilitas Gedung (🏢), Beasiswa Mahasiswa (🎓), Kegiatan Mahasiswa (UKM) (🎯), Pajak & Retribusi (🏛️), Sarana & Prasarana (Sarpras) (🔧), Pengeluaran Lainnya (📋).
+4.  **Standar Nomenklatur Kode Nomor Bukti Transaksi**:
+    *   `KT`  : Pengeluaran Kas (Kas Keluar)
+    *   `TTN` : Penerimaan dari Bank / Pencairan Cek
+    *   `P`   : Panjar (Uang Muka Kerja)
+    *   `PP`  : Pengembalian Panjar
+    *   `PK`  : Pengembalian Pinjaman Karyawan
+    *   `TT`  : Pemasukan ke Kas
 
 ---
 

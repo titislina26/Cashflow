@@ -88,10 +88,21 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Kode Pemasukan/Pengeluaran (No. Bukti)</label>
+        <div class="form-group" id="form-group-voucher">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label class="form-label" style="margin-bottom:0;">No. Bukti / Dokumen</label>
+            <span style="font-size:0.75rem; color:var(--text-muted);">Pilih prefix:</span>
+          </div>
           <input type="text" class="form-input" name="voucher_number" id="modal-voucher" 
-            placeholder="Contoh: KT. 03 26.001 (Opsional)" />
+            placeholder="Contoh: KT. 01 26.001 (Opsional)" />
+          <div class="voucher-prefix-chips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+            <button type="button" class="btn-prefix-chip" data-prefix="KT." data-type="expense" title="Pengeluaran Kas"><strong>KT.</strong> Pengeluaran</button>
+            <button type="button" class="btn-prefix-chip" data-prefix="TT." data-type="income" title="Pemasukan ke Kas"><strong>TT.</strong> Masuk Kas</button>
+            <button type="button" class="btn-prefix-chip" data-prefix="TTN." data-type="income" title="Penerimaan dari Bank / Pencairan Cek"><strong>TTN.</strong> Pencairan Bank/Cek</button>
+            <button type="button" class="btn-prefix-chip" data-prefix="P." data-type="expense" title="Panjar Kerja"><strong>P.</strong> Panjar</button>
+            <button type="button" class="btn-prefix-chip" data-prefix="PP." data-type="income" title="Pengembalian Panjar"><strong>PP.</strong> Kembali Panjar</button>
+            <button type="button" class="btn-prefix-chip" data-prefix="PK." data-type="income" title="Pengembalian Pinjaman Karyawan"><strong>PK.</strong> Pinjam Karyawan</button>
+          </div>
         </div>
 
         <div class="form-group">
@@ -251,6 +262,31 @@
     text-align: center;
     color: var(--text-muted, #64748b);
     font-size: 0.85rem;
+  }
+  .btn-prefix-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    background: var(--bg-card, rgba(255, 255, 255, 0.04));
+    color: var(--text-secondary, #94a3b8);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-prefix-chip strong {
+    color: var(--text-primary, #f1f5f9);
+    font-family: monospace;
+    font-size: 0.76rem;
+  }
+  .btn-prefix-chip:hover {
+    border-color: var(--color-primary, #3b82f6);
+    color: var(--color-primary, #3b82f6);
+    background: rgba(59, 130, 246, 0.12);
+    transform: translateY(-1px);
   }
 </style>
 
@@ -588,5 +624,35 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
   };
+
+  // Handle click on voucher prefix chips
+  document.querySelectorAll('.btn-prefix-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prefix = btn.dataset.prefix;
+      const targetType = btn.dataset.type;
+      
+      if (modalVoucher) {
+        const current = modalVoucher.value.trim();
+        const prefixes = ['KT.', 'TTN.', 'TT.', 'PP.', 'PK.', 'P.'];
+        let rest = current;
+        for (const p of prefixes) {
+          if (rest.toUpperCase().startsWith(p)) {
+            rest = rest.substring(p.length).trim();
+            break;
+          }
+        }
+        modalVoucher.value = prefix + (rest ? ' ' + rest : ' ');
+        modalVoucher.focus();
+        modalVoucher.setSelectionRange(modalVoucher.value.length, modalVoucher.value.length);
+      }
+
+      if (targetType) {
+        const typeBtn = document.getElementById(targetType === 'income' ? 'btn-select-income' : 'btn-select-expense');
+        if (typeBtn && !typeBtn.classList.contains('active')) {
+          typeBtn.click();
+        }
+      }
+    });
+  });
 });
 </script>

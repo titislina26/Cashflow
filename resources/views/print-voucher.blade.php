@@ -1,7 +1,22 @@
 @php
   \Carbon\Carbon::setLocale('id');
   $isIncome = ($transactionType === 'income');
-  $voucherTitle = $isIncome ? 'BUKTI PEMASUKAN' : 'BUKTI PENGELUARAN';
+  $cleanVoucher = strtoupper(trim($voucherNumber ?? ''));
+  if (str_starts_with($cleanVoucher, 'PP')) {
+      $voucherTitle = 'BUKTI PENGEMBALIAN PANJAR';
+  } elseif (str_starts_with($cleanVoucher, 'PK')) {
+      $voucherTitle = 'BUKTI PENGEMBALIAN PINJAMAN KARYAWAN';
+  } elseif (str_starts_with($cleanVoucher, 'TTN')) {
+      $voucherTitle = 'BUKTI PENERIMAAN BANK / PENCAIRAN CEK';
+  } elseif (str_starts_with($cleanVoucher, 'TT')) {
+      $voucherTitle = 'BUKTI PEMASUKAN KAS';
+  } elseif (str_starts_with($cleanVoucher, 'KT')) {
+      $voucherTitle = 'BUKTI PENGELUARAN KAS';
+  } elseif (str_starts_with($cleanVoucher, 'P.') || str_starts_with($cleanVoucher, 'P ') || preg_match('/^P\d/', $cleanVoucher)) {
+      $voucherTitle = 'BUKTI PENGELUARAN KAS (PANJAR KERJA)';
+  } else {
+      $voucherTitle = $isIncome ? 'BUKTI PEMASUKAN' : 'BUKTI PENGELUARAN';
+  }
   
   // Format terbilang with exact single 'Rupiah' inside delimiter '#'
   $cleanSpelling = preg_replace('/\s+rupiah\s*$/i', '', trim($terbilang));
